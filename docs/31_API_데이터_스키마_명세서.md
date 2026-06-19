@@ -1,122 +1,226 @@
-# 📄 30_시스템_아키텍처_설계서
+# 📄 31_API_데이터_스키마_명세서
 
 ## 1. 문서 개요
 
-본 문서는 폴다임(Poldigm) 서비스의 무중단 대규모 트래픽 처리와 보안(알고리즘 유출 및 어뷰징 방지)을 달성하기 위한 **전체 시스템 아키텍처 및 데이터 흐름도**를 정의합니다. 개발팀은 본 설계서를 바탕으로 인프라 환경을 구축하고 프론트엔드/백엔드 통신 규약을 확립합니다.
+본 문서는 폴다임(Poldigm) MVP에서 프론트엔드와 SvelteKit 서버 API가 주고받는 데이터 계약을 정의합니다. 핵심 원칙은 **클라이언트가 점수와 분기 로직을 알 수 없게 하고, 서버가 응답 기록만으로 다음 문항과 최종 결과를 계산하는 것**입니다.
 
-## 2. 전체 시스템 구성도 (High-Level Architecture)
+## 2. 공통 규칙
 
-Poldigm은 별도의 중앙 집중식 백엔드 서버(EC2 등) 없이, **글로벌 엣지 네트워크(Edge Network)와 서버리스 DB를 결합한 모던 웹 아키텍처**를 사용합니다.
+- 모든 API는 JSON을 사용합니다.
+- 클라이언트는 `history`에 사용자가 선택한 문항 ID와 선택지만 보냅니다.
+- 서버 응답의 질문 데이터에는 `scoreEffect`, `branchCondition`, 배점 값 등 내부 알고리즘 필드를 포함하지 않습니다.
+- 최종 결과 계산과 DB 적재는 `/api/submit-result`에서만 수행합니다.
 
-Plaintext
+## 3. 공통 타입
 
+### 3.1. AnswerHistoryItem
+
+```ts
+type AnswerHistoryItem = {
+  questionId: string;
+  choice: 'A' | 'B';
+  answeredAt?: string;
+};
 ```
-[ Client / Browser ]  <--- (1) UI 렌더링 & 상태 관리 --->  [ Cloudflare Edge Network ]
-  - SvelteKit (Frontend)                                     - SvelteKit (Server-side API)
-  - HTML/CSS/JS (Tailwind)                                   - /api/next-question
-  - SessionStorage (상태 캐싱)                                - /api/submit-result
-  - Turnstile (봇 검증 위젯)                                  - 질문 데이터 (questions.json) 은닉
-          |                                                             |
-          | (2) 봇 검증 토큰 발급                                          | (3) 최종 결과 Insert
-          v                                                             v
-[ Cloudflare Turnstile API ]                               [ Supabase (PostgreSQL) ]
-  - 토큰 유효성 검증                                           - test_results 테이블
-                                                               - RLS (Row Level Security) 적용
+
+### 3.2. PublicQuestion
+
+```ts
+type PublicQuestion = {
+  id: string;
+  phase: 1 | 2;
+  axis: 'C_I' | 'T_P' | 'M_E' | 'O_L';
+  prompt: string;
+  choices: {
+    A: string;
+    B: string;
+  };
+  progress: {
+    current: number;
+    total: number;
+    label: string;
+  };
+};
 ```
 
-## 3. 핵심 컴포넌트 및 역할 명세
+## 4. `POST /api/next-question`
 
-### 3.1. 프론트엔드 (Client-side)
+누적 응답 기록을 기준으로 다음 문항을 반환합니다.
 
-- **기술 스택:** SvelteKit, Tailwind CSS
-    
-- **역할:**
-    
-    - 사용자 UI 렌더링 및 페이지 전환 (SPA 라우팅).
-        
-    - `sessionStorage`를 활용한 테스트 진행 상태(현재 문항, 누적 선택지) 임시 저장 (이탈 후 재접속 시 복구용).
-        
-    - html2canvas 라이브러리를 활용한 결과 화면 이미지 렌더링 및 다운로드.
-        
-    - Cloudflare Turnstile 위젯을 백그라운드에서 실행하여 사람임을 증명하는 토큰 발급.
-        
+### Request
 
-### 3.2. 엣지 서버 API (Server-side)
+```json
+{
+  "history": [
+    {
+      "questionId": "Q_1_C_I_1",
+      "choice": "A",
+      "answeredAt": "2026-06-19T09:00:00.000Z"
+    }
+  ]
+}
+```
 
-- **기술 스택:** Cloudflare Pages (SvelteKit `+server.ts` 엔드포인트)
-    
-- **역할:**
-    
-    - **알고리즘 은닉:** 100개의 문항 데이터(`questions.json`)와 점수 배점/분기 조건 로직을 클라이언트 브라우저에서 절대 볼 수 없도록 서버 메모리에서만 처리.
-        
-    - **적응형 문항 서빙 (`/api/next-question`):** 클라이언트가 보낸 응답 기록을 바탕으로 다음 문항을 계산하고, 정답에 대한 '가중치 데이터'는 마스킹(삭제)한 채 순수 텍스트만 프론트엔드로 전달.
-        
-    - **최종 결과 연산 (`/api/submit-result`):** 조작 방지를 위해 클라이언트가 보낸 전체 응답 기록을 서버에서 다시 한번 합산하여 최종 성향 코드(예: `CTMO-S`) 도출.
-        
-    - Turnstile 토큰 검증 후 Supabase로 데이터 전송.
-        
+### Response: 진행 중
 
-### 3.3. 데이터베이스 (Database)
+```json
+{
+  "status": "in_progress",
+  "question": {
+    "id": "Q_1_C_I_2",
+    "phase": 1,
+    "axis": "C_I",
+    "prompt": "국가적 전염병 유행 시, 백신 접종을 의무화해야 할까요?",
+    "choices": {
+      "A": "집단 면역을 위해 의무화하고 미접종자를 제재해야 한다.",
+      "B": "개인의 신체 결정권을 침해할 수 없으므로 자율에 맡긴다."
+    },
+    "progress": {
+      "current": 2,
+      "total": 20,
+      "label": "Phase 1 (탐색기)"
+    }
+  }
+}
+```
 
-- **기술 스택:** Supabase (PostgreSQL 기반 BaaS)
-    
-- **역할:**
-    
-    - 최종 산출된 테스트 결과 통계 및 익명 유저 데이터 수집.
-        
-    - 데이터베이스 직접 노출을 막기 위해 REST API 방식으로만 통신.
-        
+### Response: 완료
 
-## 4. 핵심 데이터 흐름도 (Data Flow)
+```json
+{
+  "status": "completed",
+  "nextAction": "submit_result"
+}
+```
 
-### Flow 1: 적응형 테스트 진행 (Phase 1 → Phase 2)
+## 5. `POST /api/submit-result`
 
-1. **[Client]** 사용자가 1번 문항에서 'A'를 선택합니다.
-    
-2. **[Client]** 로컬 상태(`sessionStorage`)에 응답 내역을 추가하고, `/api/next-question`으로 지금까지의 누적 응답 배열(`history`)을 `POST` 요청합니다.
-    
-3. **[Edge Server]** 누적 응답을 분석하여 Phase 1이 끝났는지 판단합니다.
-    
-4. **[Edge Server]** Phase 2 진입 시, 이전 응답 결과(예: 공동체 성향 40점)에 맞는 분기 조건(`condition: "C"`)을 가진 하드코어 문항을 JSON 풀에서 찾습니다.
-    
-5. **[Edge Server]** 해당 문항의 텍스트 데이터만 [Client]로 응답(Response)합니다. (점수 정보 제외)
-    
-6. **[Client]** 전달받은 새 문항을 화면에 부드럽게 렌더링합니다.
-    
+전체 응답 기록과 봇 검증 정보를 받아 서버에서 점수, 결과 코드, 결과 화면 데이터를 계산합니다.
 
-### Flow 2: 테스트 완료 및 결과 도출
+### Request
 
-1. **[Client]** 20번째 마지막 문항을 선택합니다.
-    
-2. **[Client]** 백그라운드에서 Turnstile 토큰을 생성합니다.
-    
-3. **[Client]** 전체 20개의 응답 배열(`history`)과 Turnstile 토큰을 `/api/submit-result`로 전송합니다.
-    
-4. **[Edge Server]** Turnstile API를 호출하여 봇(매크로) 여부를 1차 검증합니다.
-    
-5. **[Edge Server]** 봇이 아니라면, 서버의 배점표를 기준으로 최종 점수를 연산하고 `CTMO-S` 등의 최종 결과를 확정합니다.
-    
-6. **[Edge Server]** 결과 데이터를 Supabase에 `INSERT` 요청합니다.
-    
-7. **[Edge Server]** DB 저장 완료 후, [Client]에게 최종 결과 코드 및 맵핑 텍스트를 반환합니다.
-    
-8. **[Client]** 반환받은 데이터를 바탕으로 결과 페이지를 렌더링합니다.
-    
+```json
+{
+  "history": [
+    {
+      "questionId": "Q_1_C_I_1",
+      "choice": "A",
+      "answeredAt": "2026-06-19T09:00:00.000Z"
+    }
+  ],
+  "turnstileToken": "0.xxxxxx",
+  "playTimeSec": 142,
+  "deviceType": "Mobile",
+  "utmSource": "ig_story"
+}
+```
 
-## 5. 인프라 및 보안 특장점 (Security & Scaling)
+### Response
 
-본 아키텍처는 초기 자본 없이 수백만 명의 접속자를 감당하기 위해 설계되었습니다.
+```json
+{
+  "resultId": "550e8400-e29b-41d4-a716-446655440000",
+  "resultCode": "CTMO-S",
+  "scores": {
+    "C": 80,
+    "I": 20,
+    "T": 80,
+    "P": 20,
+    "M": 80,
+    "E": 20,
+    "O": 80,
+    "L": 20
+  },
+  "resultViewModel": {
+    "typeCode": "CTMO",
+    "intensityTag": "S",
+    "title": "냉철한 시스템 설계자",
+    "subtitle": "무너진 규칙을 세우고, 검증된 실력자에게 보상하라.",
+    "characterImg": "character_CTMO.png",
+    "description": "당신은 사회가 올바르게 굴러가기 위해 강력한 통제와 엄격한 규칙이 필수라고 믿는 철저한 시스템 설계자입니다.",
+    "chemistryBest": "ITML",
+    "chemistryWorst": "CPEL"
+  }
+}
+```
 
-1. **Zero-cost Auto Scaling:**
-    
-    - Cloudflare Pages의 CDN 엣지 네트워크를 통해 HTML/JS 정적 파일과 API가 전 세계 노드에서 서빙됩니다. 유명 유튜버나 인플루언서의 공유로 인해 초당 수만 명의 트래픽이 발생해도 서버가 다운되지 않으며, 대역폭 비용이 청구되지 않습니다.
-        
-2. **무인증 어뷰징 차단 (Insert-only & Turnstile):**
-    
-    - 비로그인 서비스의 취약점인 '무한 결과 제출 테러(DB 스팸)'를 막기 위해 **Cloudflare Turnstile**을 적용합니다. 유저에게 거슬리는 신호등/횡단보도 퀴즈(reCAPTCHA)를 풀게 하지 않고, 브라우저 환경을 은밀히 분석하여 봇을 차단합니다.
-        
-    - **Supabase RLS 설정:** 익명 사용자(anon)는 오직 `test_results` 테이블에 `INSERT`만 할 수 있으며, 기존 데이터를 읽거나(`SELECT`), 수정/삭제(`UPDATE`, `DELETE`)하는 것은 DB 레벨에서 완벽히 차단됩니다.
-        
-3. **지적재산권(알고리즘) 보호:**
-    
-    - 모든 심화 문항 데이터와 점수 연산 로직이 SvelteKit 백엔드(`+server.ts`)에 위치하므로, 크롬 개발자 도구(F12)를 통해서도 서비스의 핵심 노하우를 빼낼 수 없습니다.
+## 6. 오류 응답
+
+모든 오류 응답은 아래 형태를 사용합니다.
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "history 형식이 올바르지 않습니다."
+  }
+}
+```
+
+| HTTP Status | code | 발생 조건 |
+|---|---|---|
+| `400` | `validation_error` | request body 누락, 잘못된 선택지, 알 수 없는 문항 ID |
+| `403` | `bot_verification_failed` | Turnstile 검증 실패 |
+| `429` | `abuse_suspected` | 비정상적으로 짧은 플레이 시간 또는 반복 제출 탐지 |
+| `500` | `server_error` | 서버 내부 오류, Supabase 저장 실패 |
+
+## 7. 서버 전용 `questions.json` 개념 스키마
+
+`questions.json`은 클라이언트 번들에 포함하지 않고 SvelteKit 서버 코드에서만 로드합니다.
+
+```ts
+type QuestionDefinition = {
+  id: string;
+  axis: 'C_I' | 'T_P' | 'M_E' | 'O_L';
+  phase: 1 | 2;
+  branchCondition: 'COMMON' | 'C' | 'I' | 'T' | 'P' | 'M' | 'E' | 'O' | 'L' | 'BALANCED';
+  prompt: string;
+  choices: {
+    A: string;
+    B: string;
+  };
+  scoreEffect: {
+    A?: Partial<Record<'C' | 'I' | 'T' | 'P' | 'M' | 'E' | 'O' | 'L', number>>;
+    B?: Partial<Record<'C' | 'I' | 'T' | 'P' | 'M' | 'E' | 'O' | 'L', number>>;
+  };
+};
+```
+
+### 예시
+
+```json
+{
+  "id": "Q_1_C_I_1",
+  "axis": "C_I",
+  "phase": 1,
+  "branchCondition": "COMMON",
+  "prompt": "흉악범의 신상정보 공개 범위를 어떻게 해야 할까요?",
+  "choices": {
+    "A": "인권보다 공공의 알 권리와 안전이 우선이다.",
+    "B": "범죄자라도 헌법상 개인의 인권은 보호되어야 한다."
+  },
+  "scoreEffect": {
+    "A": { "C": 20 },
+    "B": { "I": 20 }
+  }
+}
+```
+
+## 8. 결과 매핑 데이터 계약
+
+결과 매핑은 `11_결과지_텍스트_맵핑_문서`의 구조를 기준으로 서버 또는 서버 전용 JSON에서 관리합니다.
+
+```ts
+type ResultMapping = {
+  type_code: string;
+  title: string;
+  subtitle: string;
+  character_img: string;
+  desc_S: string;
+  desc_M: string;
+  chemistry_best: string;
+  chemistry_worst: string;
+};
+```
+
+프론트엔드는 API가 반환한 `resultViewModel`만 렌더링하며, 전체 결과 매핑 테이블을 직접 보유하지 않습니다.
