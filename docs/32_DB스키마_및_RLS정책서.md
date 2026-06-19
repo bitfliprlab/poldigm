@@ -2,11 +2,11 @@
 
 ## 1. 문서 개요
 
-본 문서는 폴다임(Poldigm) 서비스의 데이터베이스(Supabase / PostgreSQL) 구조와 보안 정책을 정의합니다. 무인증(비로그인) 기반 서비스의 특성상 악의적인 매크로나 데이터 크롤링을 원천 차단하기 위해, **행 수준 보안(RLS, Row Level Security)** 정책을 엄격하게 적용하여 오직 '검증된 데이터의 적재(Insert)'만 허용하도록 설계되었습니다.
+본 문서는 폴다임(Poldigm) 서비스의 데이터베이스(Supabase / PostgreSQL) 구조와 보안 정책을 정의합니다. 무인증(비로그인) 기반 서비스의 특성상 악의적인 매크로나 데이터 크롤링을 차단하기 위해, 클라이언트의 Supabase 직접 접근을 금지하고 **SvelteKit 서버 API에서 검증된 데이터만 적재**하도록 설계합니다. RLS(Row Level Security)는 실수나 키 노출에 대비한 추가 방어 계층으로 유지합니다.
 
 ## 2. 데이터베이스 테이블 스키마 (Table Schema)
 
-데이터베이스는 사용자 통계 분석 및 추후 트렌드 리포트 발행을 목적으로 단일 테이블(`test_results`)로 가볍게 구성됩니다.
+데이터베이스는 사용자 통계 분석 및 추후 트렌드 리포트 발행을 목적으로 단일 테이블(`test_results`)로 가볍게 구성됩니다. 질문 풀과 결과 매핑은 DB에 저장하지 않고 SvelteKit 서버 전용 파일 또는 모듈로 관리합니다.
 
 ### 테이블명: `test_results`
 
@@ -26,10 +26,13 @@
 |`play_time_sec`|`int2`|Nullable|1번 문항부터 완료까지 걸린 총 소요 시간(초). (어뷰징/봇 판단용 지표)|
 |`device_type`|`varchar(20)`|Nullable|접속 기기 환경 (예: `Mobile`, `Desktop`, `Tablet`)|
 |`utm_source`|`varchar(50)`|Nullable|유입 경로 (예: `ig_story`, `x_link`, `kakao`)|
+|`country_code`|`char(2)`|Nullable|Cloudflare 요청 메타데이터에서 파생한 접속 국가 코드 (예: `KR`, `US`)|
+
+닉네임은 결과 화면 개인화를 위한 선택 입력값이지만, MVP에서는 `test_results` 테이블에 저장하지 않습니다. IP 주소 원문, 도시, 상세 위치도 저장하지 않습니다.
 
 ## 3. RLS (Row Level Security) 보안 정책 설정
 
-Supabase의 핵심 보안 기능인 RLS를 활성화하여, 외부에서 API 키(`anon key`)를 탈취하더라도 기존 데이터를 조회하거나 훼손할 수 없도록 원천 차단합니다.
+Supabase의 핵심 보안 기능인 RLS를 활성화하여, 외부에서 클라이언트용 API 키가 노출되더라도 기존 데이터를 조회하거나 훼손할 수 없도록 차단합니다. MVP 기본 방침은 브라우저에서 Supabase를 직접 호출하지 않고, Cloudflare Pages Functions에서 실행되는 SvelteKit 서버 API만 Supabase에 접근하는 것입니다.
 
 ### 3.1. 보안 정책 SQL 스크립트
 
@@ -53,24 +56,19 @@ CREATE TABLE test_results (
   score_l int2 NOT NULL CHECK (score_l >= 0 AND score_l <= 100),
   play_time_sec int2,
   device_type varchar(20),
-  utm_source varchar(50)
+  utm_source varchar(50),
+  country_code char(2)
 );
 
 -- 2. RLS(행 수준 보안) 강제 활성화
 ALTER TABLE test_results ENABLE ROW LEVEL SECURITY;
 
--- 3. 익명 사용자(anon)의 데이터 적재(INSERT)만 허용하는 정책
-CREATE POLICY "Allow Insert for anonymous users" 
-ON test_results 
-FOR INSERT 
-TO anon 
-WITH CHECK (true);
+-- 3. 클라이언트(anon)의 직접 접근은 허용하지 않음
+-- RLS를 활성화하면 별도 정책이 없는 anon 요청은 기본적으로 차단됩니다.
+-- MVP에서는 브라우저가 Supabase에 직접 INSERT/SELECT/UPDATE/DELETE 하지 않습니다.
 
--- 4. 익명 사용자(anon)의 데이터 조회(SELECT) 원천 차단 정책
--- (RLS를 활성화하면 기본적으로 차단되지만, 명시적 관리를 위해 기재)
--- 익명 유저에 대한 SELECT, UPDATE, DELETE 권한은 절대 부여하지 않습니다.
-
--- 5. 관리자(Service Role)의 전체 권한(CRUD) 허용 정책 (어드민 대시보드용)
+-- 4. 서버(Service Role)의 전체 권한(CRUD) 허용 정책
+-- SvelteKit 서버 API는 Cloudflare Pages 환경변수에 저장된 Service Role Key로만 DB에 접근합니다.
 CREATE POLICY "Allow Full Access for Service Role" 
 ON test_results 
 TO service_role 
@@ -80,12 +78,14 @@ WITH CHECK (true);
 
 ## 4. 데이터 플로우 및 무결성 검증 (백엔드 로직)
 
-클라이언트(브라우저)가 Supabase로 직접 데이터를 `INSERT`하게 두지 않고, 반드시 **Cloudflare Edge Server**를 거쳐 검증된 데이터만 DB에 적재합니다.
+클라이언트(브라우저)가 Supabase로 직접 데이터를 `INSERT`하게 두지 않고, 반드시 **Cloudflare Pages Functions에서 실행되는 SvelteKit 서버 API**를 거쳐 검증된 데이터만 DB에 적재합니다.
 
 1. **Turnstile 검증 통과:** 프론트엔드에서 넘어온 봇 검증 토큰이 유효한지 Cloudflare Server에서 1차 확인합니다.
     
 2. **시간 검증 로직 (Anti-Macro):** `play_time_sec`가 비정상적으로 짧은 경우(예: 3초 이내에 20문항 완료), 해당 요청을 어뷰징으로 간주하여 DB `INSERT` 과정을 생략(Skip)하고 클라이언트에는 더미 결과를 반환합니다.
     
-3. **점수 정합성 확인:** `score_c + score_i`의 합이 설정된 가중치 로직의 최대치(예: 100점)를 초과하는 등 데이터 변조가 의심될 경우 DB 저장을 차단합니다.
+3. **국가 코드 파생:** 접속 국가 코드는 클라이언트 요청값이 아니라 Cloudflare 요청 메타데이터에서 서버가 파생하며, 없거나 신뢰할 수 없는 경우 `null`로 저장합니다. IP 주소 원문은 저장하지 않습니다.
     
-4. **최종 적재:** 모든 검증을 통과한 순수 유저의 데이터만 Supabase `test_results` 테이블에 안전하게 `INSERT` 됩니다.
+4. **점수 정합성 확인:** `score_c + score_i`의 합이 설정된 가중치 로직의 최대치(예: 100점)를 초과하는 등 데이터 변조가 의심될 경우 DB 저장을 차단합니다.
+    
+5. **최종 적재:** 모든 검증을 통과한 순수 유저의 데이터만 서버 권한으로 Supabase `test_results` 테이블에 안전하게 `INSERT` 됩니다.
