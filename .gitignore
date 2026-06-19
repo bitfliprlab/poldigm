@@ -1,0 +1,58 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# Local editor workspace settings
+.obsidian/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# SvelteKit / frontend build output
+.svelte-kit/
+build/
+dist/
+.vite/
+
+# Cloudflare / deployment
+.wrangler/
+.vercel/
+.netlify/
+
+# Test, coverage, and caches
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+.cache/
+.eslintcache
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Generated media / temporary exports
+tmp/
+temp/
+*.tmp
+*.bak

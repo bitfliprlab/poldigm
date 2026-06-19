@@ -1,0 +1,122 @@
+# 📄 30_시스템_아키텍처_설계서
+
+## 1. 문서 개요
+
+본 문서는 폴다임(Poldigm) 서비스의 무중단 대규모 트래픽 처리와 보안(알고리즘 유출 및 어뷰징 방지)을 달성하기 위한 **전체 시스템 아키텍처 및 데이터 흐름도**를 정의합니다. 개발팀은 본 설계서를 바탕으로 인프라 환경을 구축하고 프론트엔드/백엔드 통신 규약을 확립합니다.
+
+## 2. 전체 시스템 구성도 (High-Level Architecture)
+
+Poldigm은 별도의 중앙 집중식 백엔드 서버(EC2 등) 없이, **글로벌 엣지 네트워크(Edge Network)와 서버리스 DB를 결합한 모던 웹 아키텍처**를 사용합니다.
+
+Plaintext
+
+```
+[ Client / Browser ]  <--- (1) UI 렌더링 & 상태 관리 --->  [ Cloudflare Edge Network ]
+  - SvelteKit (Frontend)                                     - SvelteKit (Server-side API)
+  - HTML/CSS/JS (Tailwind)                                   - /api/next-question
+  - SessionStorage (상태 캐싱)                                - /api/submit-result
+  - Turnstile (봇 검증 위젯)                                  - 질문 데이터 (questions.json) 은닉
+          |                                                             |
+          | (2) 봇 검증 토큰 발급                                          | (3) 최종 결과 Insert
+          v                                                             v
+[ Cloudflare Turnstile API ]                               [ Supabase (PostgreSQL) ]
+  - 토큰 유효성 검증                                           - test_results 테이블
+                                                               - RLS (Row Level Security) 적용
+```
+
+## 3. 핵심 컴포넌트 및 역할 명세
+
+### 3.1. 프론트엔드 (Client-side)
+
+- **기술 스택:** SvelteKit, Tailwind CSS
+    
+- **역할:**
+    
+    - 사용자 UI 렌더링 및 페이지 전환 (SPA 라우팅).
+        
+    - `sessionStorage`를 활용한 테스트 진행 상태(현재 문항, 누적 선택지) 임시 저장 (이탈 후 재접속 시 복구용).
+        
+    - html2canvas 라이브러리를 활용한 결과 화면 이미지 렌더링 및 다운로드.
+        
+    - Cloudflare Turnstile 위젯을 백그라운드에서 실행하여 사람임을 증명하는 토큰 발급.
+        
+
+### 3.2. 엣지 서버 API (Server-side)
+
+- **기술 스택:** Cloudflare Pages (SvelteKit `+server.ts` 엔드포인트)
+    
+- **역할:**
+    
+    - **알고리즘 은닉:** 100개의 문항 데이터(`questions.json`)와 점수 배점/분기 조건 로직을 클라이언트 브라우저에서 절대 볼 수 없도록 서버 메모리에서만 처리.
+        
+    - **적응형 문항 서빙 (`/api/next-question`):** 클라이언트가 보낸 응답 기록을 바탕으로 다음 문항을 계산하고, 정답에 대한 '가중치 데이터'는 마스킹(삭제)한 채 순수 텍스트만 프론트엔드로 전달.
+        
+    - **최종 결과 연산 (`/api/submit-result`):** 조작 방지를 위해 클라이언트가 보낸 전체 응답 기록을 서버에서 다시 한번 합산하여 최종 성향 코드(예: `CTMO-S`) 도출.
+        
+    - Turnstile 토큰 검증 후 Supabase로 데이터 전송.
+        
+
+### 3.3. 데이터베이스 (Database)
+
+- **기술 스택:** Supabase (PostgreSQL 기반 BaaS)
+    
+- **역할:**
+    
+    - 최종 산출된 테스트 결과 통계 및 익명 유저 데이터 수집.
+        
+    - 데이터베이스 직접 노출을 막기 위해 REST API 방식으로만 통신.
+        
+
+## 4. 핵심 데이터 흐름도 (Data Flow)
+
+### Flow 1: 적응형 테스트 진행 (Phase 1 → Phase 2)
+
+1. **[Client]** 사용자가 1번 문항에서 'A'를 선택합니다.
+    
+2. **[Client]** 로컬 상태(`sessionStorage`)에 응답 내역을 추가하고, `/api/next-question`으로 지금까지의 누적 응답 배열(`history`)을 `POST` 요청합니다.
+    
+3. **[Edge Server]** 누적 응답을 분석하여 Phase 1이 끝났는지 판단합니다.
+    
+4. **[Edge Server]** Phase 2 진입 시, 이전 응답 결과(예: 공동체 성향 40점)에 맞는 분기 조건(`condition: "C"`)을 가진 하드코어 문항을 JSON 풀에서 찾습니다.
+    
+5. **[Edge Server]** 해당 문항의 텍스트 데이터만 [Client]로 응답(Response)합니다. (점수 정보 제외)
+    
+6. **[Client]** 전달받은 새 문항을 화면에 부드럽게 렌더링합니다.
+    
+
+### Flow 2: 테스트 완료 및 결과 도출
+
+1. **[Client]** 20번째 마지막 문항을 선택합니다.
+    
+2. **[Client]** 백그라운드에서 Turnstile 토큰을 생성합니다.
+    
+3. **[Client]** 전체 20개의 응답 배열(`history`)과 Turnstile 토큰을 `/api/submit-result`로 전송합니다.
+    
+4. **[Edge Server]** Turnstile API를 호출하여 봇(매크로) 여부를 1차 검증합니다.
+    
+5. **[Edge Server]** 봇이 아니라면, 서버의 배점표를 기준으로 최종 점수를 연산하고 `CTMO-S` 등의 최종 결과를 확정합니다.
+    
+6. **[Edge Server]** 결과 데이터를 Supabase에 `INSERT` 요청합니다.
+    
+7. **[Edge Server]** DB 저장 완료 후, [Client]에게 최종 결과 코드 및 맵핑 텍스트를 반환합니다.
+    
+8. **[Client]** 반환받은 데이터를 바탕으로 결과 페이지를 렌더링합니다.
+    
+
+## 5. 인프라 및 보안 특장점 (Security & Scaling)
+
+본 아키텍처는 초기 자본 없이 수백만 명의 접속자를 감당하기 위해 설계되었습니다.
+
+1. **Zero-cost Auto Scaling:**
+    
+    - Cloudflare Pages의 CDN 엣지 네트워크를 통해 HTML/JS 정적 파일과 API가 전 세계 노드에서 서빙됩니다. 유명 유튜버나 인플루언서의 공유로 인해 초당 수만 명의 트래픽이 발생해도 서버가 다운되지 않으며, 대역폭 비용이 청구되지 않습니다.
+        
+2. **무인증 어뷰징 차단 (Insert-only & Turnstile):**
+    
+    - 비로그인 서비스의 취약점인 '무한 결과 제출 테러(DB 스팸)'를 막기 위해 **Cloudflare Turnstile**을 적용합니다. 유저에게 거슬리는 신호등/횡단보도 퀴즈(reCAPTCHA)를 풀게 하지 않고, 브라우저 환경을 은밀히 분석하여 봇을 차단합니다.
+        
+    - **Supabase RLS 설정:** 익명 사용자(anon)는 오직 `test_results` 테이블에 `INSERT`만 할 수 있으며, 기존 데이터를 읽거나(`SELECT`), 수정/삭제(`UPDATE`, `DELETE`)하는 것은 DB 레벨에서 완벽히 차단됩니다.
+        
+3. **지적재산권(알고리즘) 보호:**
+    
+    - 모든 심화 문항 데이터와 점수 연산 로직이 SvelteKit 백엔드(`+server.ts`)에 위치하므로, 크롬 개발자 도구(F12)를 통해서도 서비스의 핵심 노하우를 빼낼 수 없습니다.
