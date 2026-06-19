@@ -14,7 +14,8 @@
 |---|---|---|---|
 |`id`|`uuid`|Primary Key, Default `uuid_generate_v4()`|레코드 고유 식별자|
 |`created_at`|`timestamptz`|Default `now()`|테스트 완료 및 데이터 저장 시각|
-|`result_code`|`varchar(10)`|Not Null|최종 도출된 성향 코드 및 태그 (예: `CTMO-S`)|
+|`locale`|`varchar(10)`|Not Null, Default `'ko-KR'`|결과 산출에 사용된 콘텐츠 로케일. MVP 기본값은 `ko-KR`|
+|`result_code`|`varchar(10)`|Not Null, Check `^[CI][TP][ME][OL]-(S\|M)$`|최종 도출된 성향 코드 및 태그 (예: `CTMO-S`)|
 |`score_c`|`int2`|Not Null, Check `(0~100)`|C (공동체) 누적 점수|
 |`score_i`|`int2`|Not Null, Check `(0~100)`|I (개인) 누적 점수|
 |`score_t`|`int2`|Not Null, Check `(0~100)`|T (전통) 누적 점수|
@@ -23,10 +24,12 @@
 |`score_e`|`int2`|Not Null, Check `(0~100)`|E (평등) 누적 점수|
 |`score_o`|`int2`|Not Null, Check `(0~100)`|O (질서) 누적 점수|
 |`score_l`|`int2`|Not Null, Check `(0~100)`|L (자유) 누적 점수|
-|`play_time_sec`|`int2`|Nullable|1번 문항부터 완료까지 걸린 총 소요 시간(초). (어뷰징/봇 판단용 지표)|
+|`play_time_sec`|`int`|Nullable|1번 문항부터 완료까지 걸린 총 소요 시간(초). (어뷰징/봇 판단용 지표)|
 |`device_type`|`varchar(20)`|Nullable|접속 기기 환경 (예: `Mobile`, `Desktop`, `Tablet`)|
 |`utm_source`|`varchar(50)`|Nullable|유입 경로 (예: `ig_story`, `x_link`, `kakao`)|
 |`country_code`|`char(2)`|Nullable|Cloudflare 요청 메타데이터에서 파생한 접속 국가 코드 (예: `KR`, `US`)|
+
+축별 점수는 개별 점수 `0~100` 범위와 함께, 대립 축 합계가 `100`을 초과하지 않도록 제약합니다. 예: `score_c + score_i <= 100`.
 
 닉네임은 결과 화면 개인화를 위한 선택 입력값이지만, MVP에서는 `test_results` 테이블에 저장하지 않습니다. IP 주소 원문, 도시, 상세 위치도 저장하지 않습니다.
 
@@ -45,7 +48,8 @@ SQL
 CREATE TABLE test_results (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   created_at timestamptz DEFAULT now(),
-  result_code varchar(10) NOT NULL,
+  locale varchar(10) NOT NULL DEFAULT 'ko-KR',
+  result_code varchar(10) NOT NULL CHECK (result_code ~ '^[CI][TP][ME][OL]-(S|M)$'),
   score_c int2 NOT NULL CHECK (score_c >= 0 AND score_c <= 100),
   score_i int2 NOT NULL CHECK (score_i >= 0 AND score_i <= 100),
   score_t int2 NOT NULL CHECK (score_t >= 0 AND score_t <= 100),
@@ -54,10 +58,14 @@ CREATE TABLE test_results (
   score_e int2 NOT NULL CHECK (score_e >= 0 AND score_e <= 100),
   score_o int2 NOT NULL CHECK (score_o >= 0 AND score_o <= 100),
   score_l int2 NOT NULL CHECK (score_l >= 0 AND score_l <= 100),
-  play_time_sec int2,
+  play_time_sec int,
   device_type varchar(20),
   utm_source varchar(50),
-  country_code char(2)
+  country_code char(2),
+  CHECK (score_c + score_i <= 100),
+  CHECK (score_t + score_p <= 100),
+  CHECK (score_m + score_e <= 100),
+  CHECK (score_o + score_l <= 100)
 );
 
 -- 2. RLS(행 수준 보안) 강제 활성화
@@ -86,6 +94,6 @@ WITH CHECK (true);
     
 3. **국가 코드 파생:** 접속 국가 코드는 클라이언트 요청값이 아니라 Cloudflare 요청 메타데이터에서 서버가 파생하며, 없거나 신뢰할 수 없는 경우 `null`로 저장합니다. IP 주소 원문은 저장하지 않습니다.
     
-4. **점수 정합성 확인:** `score_c + score_i`의 합이 설정된 가중치 로직의 최대치(예: 100점)를 초과하는 등 데이터 변조가 의심될 경우 DB 저장을 차단합니다.
+4. **점수 정합성 확인:** `result_code` 형식, 개별 점수 범위, 대립 축 합계(`score_c + score_i`, `score_t + score_p`, `score_m + score_e`, `score_o + score_l`)가 설정된 가중치 로직의 최대치(100점)를 초과하지 않는지 확인합니다. 변조가 의심될 경우 DB 저장을 차단합니다.
     
 5. **최종 적재:** 모든 검증을 통과한 순수 유저의 데이터만 서버 권한으로 Supabase `test_results` 테이블에 안전하게 `INSERT` 됩니다.

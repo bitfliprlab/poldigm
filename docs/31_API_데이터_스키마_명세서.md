@@ -12,6 +12,7 @@
 - 최종 결과 계산과 DB 적재는 `/api/submit-result`에서만 수행합니다.
 - 닉네임은 결과 화면과 공유 이미지 개인화를 위한 선택 입력값입니다. MVP에서는 서버로 전송하지 않고 DB에도 저장하지 않습니다.
 - 접속 국가 코드는 클라이언트 입력값을 신뢰하지 않고, Cloudflare 요청 메타데이터에서 서버가 파생한 값만 저장합니다. IP 원문은 DB에 저장하지 않습니다.
+- MVP는 `ko-KR` 단일 로케일만 지원합니다. API request에서 `locale`은 받지 않으며, 서버는 내부 기본값 `ko-KR`을 결과 저장 시 사용합니다.
 
 ## 3. 공통 타입
 
@@ -118,6 +119,7 @@ type PublicQuestion = {
 ```
 
 `nickname`은 request body에 포함하지 않습니다. 결과 이미지에 닉네임을 표시해야 하는 경우 클라이언트의 세션 상태에서만 사용합니다.
+`locale`도 request body에 포함하지 않습니다. MVP에서는 서버 기본값 `ko-KR`을 사용합니다.
 
 ### Response
 
@@ -125,6 +127,7 @@ type PublicQuestion = {
 {
   "resultId": "550e8400-e29b-41d4-a716-446655440000",
   "resultCode": "CTMO-S",
+  "locale": "ko-KR",
   "scores": {
     "C": 80,
     "I": 20,
@@ -186,11 +189,12 @@ type PublicQuestion = {
 
 ## 8. 서버 전용 질문 풀 개념 스키마
 
-질문 풀은 `src/lib/server/data/questions.json` 또는 `src/lib/server/questions.ts` 같은 서버 전용 경로에서 관리합니다. 클라이언트 번들에 포함하지 않고 SvelteKit 서버 코드에서만 로드합니다.
+질문 풀은 `src/lib/server/data/questions.ko-KR.json` 또는 `src/lib/server/questions.ts` 같은 서버 전용 경로에서 관리합니다. 클라이언트 번들에 포함하지 않고 SvelteKit 서버 코드에서만 로드합니다. 다국어 확장 시 로케일별 질문 파일을 추가하되, MVP API에는 locale 선택 기능을 노출하지 않습니다.
 
 ```ts
 type QuestionDefinition = {
   id: string;
+  locale: 'ko-KR';
   axis: 'C_I' | 'T_P' | 'M_E' | 'O_L';
   phase: 1 | 2;
   branchCondition: 'COMMON' | 'C' | 'I' | 'T' | 'P' | 'M' | 'E' | 'O' | 'L' | 'BALANCED';
@@ -211,6 +215,7 @@ type QuestionDefinition = {
 ```json
 {
   "id": "Q_1_C_I_1",
+  "locale": "ko-KR",
   "axis": "C_I",
   "phase": 1,
   "branchCondition": "COMMON",
@@ -228,10 +233,11 @@ type QuestionDefinition = {
 
 ## 9. 결과 매핑 데이터 계약
 
-결과 매핑은 `11_결과지_텍스트_맵핑_문서`의 구조를 기준으로 서버 또는 서버 전용 JSON에서 관리합니다.
+결과 매핑은 `11_결과지_텍스트_맵핑_문서`의 구조를 기준으로 서버 또는 서버 전용 JSON에서 관리합니다. MVP 파일명은 `result-mappings.ko-KR.json`을 기본으로 합니다.
 
 ```ts
 type ResultMapping = {
+  locale: string;
   type_code: string;
   title: string;
   subtitle: string;
