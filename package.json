@@ -1,0 +1,32 @@
+{
+  "name": "poldigm-local-mvp",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:chrome": "playwright test --project=chrome-desktop --project=chrome-mobile"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@sveltejs/adapter-auto": "^6.0.0",
+    "@sveltejs/kit": "^2.22.0",
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
+    "@testing-library/svelte": "^5.2.8",
+    "@types/node": "^22.15.0",
+    "jsdom": "^26.1.0",
+    "svelte": "^5.28.0",
+    "svelte-check": "^4.1.6",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.3"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  }
+}
