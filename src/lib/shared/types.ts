@@ -12,12 +12,25 @@ export type AnswerHistoryItem = {
   answeredAt?: string;
 };
 
+export type QuestionChoiceDisplay = {
+  label: string;
+  body: string;
+  highlights: string[];
+};
+
+export type QuestionDisplay = {
+  promptLines: [string, string];
+  promptHighlights: string[];
+  choices: Record<Choice, QuestionChoiceDisplay>;
+};
+
 export type PublicQuestion = {
   id: string;
   phase: 1 | 2;
   axis: Axis;
   prompt: string;
   choices: Record<Choice, string>;
+  display: QuestionDisplay;
   progress: {
     current: number;
     total: 20;
@@ -27,6 +40,16 @@ export type PublicQuestion = {
 
 export type Scores = Record<Letter, number>;
 
+export type ResultAxisGauge = {
+  left: Letter;
+  right: Letter;
+  leftPercent: number;
+  winner: Letter;
+  winnerPercent: number;
+  directionLabel: string;
+  strengthLabel: '강하게 기울어짐' | '기울어짐' | '균형에 가까움';
+};
+
 export type ResultViewModel = {
   typeCode: string;
   intensityTag: IntensityTag;
@@ -34,6 +57,7 @@ export type ResultViewModel = {
   subtitle: string;
   characterImg: string;
   description: string;
+  axisGauges: ResultAxisGauge[];
   chemistryBest: string;
   chemistryWorst: string;
 };

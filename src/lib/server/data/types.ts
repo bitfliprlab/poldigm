@@ -1,7 +1,21 @@
-import type { Axis, BranchCondition, Choice, IntensityEffect, Letter } from '$lib/shared/types';
+import type {
+  Axis,
+  BranchCondition,
+  Choice,
+  IntensityEffect,
+  Letter,
+  QuestionDisplay
+} from '$lib/shared/types';
 
 export type QuestionDefinition = {
   id: string;
+  slotId?: string;
+  variantOrder?: number;
+  metadata: {
+    scenarioTag: string;
+    copyFamily: string;
+    toneTag: 'daily' | 'institutional' | 'crisis';
+  };
   locale: 'ko-KR';
   axis: Axis;
   phase: 1 | 2;
@@ -10,6 +24,7 @@ export type QuestionDefinition = {
   branchOrder?: 1 | 2 | 3;
   prompt: string;
   choices: Record<Choice, string>;
+  display: QuestionDisplay;
   scoreEffect: Record<Choice, Partial<Record<Letter, number>>>;
   intensityEffect: Record<Choice, IntensityEffect>;
 };

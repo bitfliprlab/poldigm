@@ -4,6 +4,9 @@
   import CharacterImage from './CharacterImage.svelte';
 
   export let result: PublicResult;
+  export let nickname = '';
+
+  $: ownerLabel = nickname ? `${nickname}님의 사회적·정치적 가치관은` : '나의 사회적·정치적 가치관은';
 </script>
 
 <section
@@ -11,7 +14,7 @@
   class:strong={result.resultViewModel.intensityTag === 'S'}
   class="capture"
 >
-  <p class="eyebrow">나의 소셜 페르소나는</p>
+  <p class="eyebrow">{ownerLabel}</p>
   <h1>{result.resultViewModel.title}</h1>
   <p class="code">{result.resultCode}</p>
 
@@ -24,10 +27,9 @@
   <p class="subtitle">{result.resultViewModel.subtitle}</p>
 
   <div class="gauges">
-    <AxisGauge left="C" right="I" scores={result.scores} />
-    <AxisGauge left="T" right="P" scores={result.scores} />
-    <AxisGauge left="M" right="E" scores={result.scores} />
-    <AxisGauge left="O" right="L" scores={result.scores} />
+    {#each result.resultViewModel.axisGauges as gauge}
+      <AxisGauge left={gauge.left} right={gauge.right} view={gauge} />
+    {/each}
   </div>
 
   <footer>Poldigm.com</footer>

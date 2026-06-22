@@ -20,7 +20,7 @@ describe('16-type result coverage', () => {
     validateReachableHistory(history, { allowComplete: true });
 
     const result = computeResultCode(history);
-    const viewModel = buildResultViewModel(result.typeCode, result.intensityTag);
+    const viewModel = buildResultViewModel(result.typeCode, result.intensityTag, result.scores);
 
     expect(history).toHaveLength(20);
     expect(result.resultCode).toBe(`${typeCode}-S`);
@@ -34,7 +34,7 @@ describe('16-type result coverage', () => {
     validateReachableHistory(history, { allowComplete: true });
 
     const result = computeResultCode(history);
-    const viewModel = buildResultViewModel(result.typeCode, result.intensityTag);
+    const viewModel = buildResultViewModel(result.typeCode, result.intensityTag, result.scores);
 
     expect(history).toHaveLength(20);
     expect(result.resultCode).toBe(`${typeCode}-M`);

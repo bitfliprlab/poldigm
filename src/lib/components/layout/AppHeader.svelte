@@ -4,7 +4,7 @@
 
 <header class:compact>
   <a href="/" aria-label="Poldigm 홈">Poldigm</a>
-  <span>Social Persona Test</span>
+  <span>Value Spectrum Test</span>
 </header>
 
 <style>

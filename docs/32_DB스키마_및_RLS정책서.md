@@ -6,7 +6,7 @@
 
 ## 2. 데이터베이스 테이블 스키마 (Table Schema)
 
-데이터베이스는 사용자 통계 분석 및 추후 트렌드 리포트 발행을 목적으로 단일 테이블(`test_results`)로 가볍게 구성됩니다. 질문 풀과 결과 매핑은 DB에 저장하지 않고 SvelteKit 서버 전용 파일 또는 모듈로 관리합니다.
+데이터베이스는 사용자 통계 분석 및 추후 트렌드 리포트 발행을 목적으로 단일 테이블(`test_results`)로 가볍게 구성됩니다. 문항 풀과 결과 매핑은 DB에 저장하지 않고 SvelteKit 서버 전용 TS 모듈로 관리합니다.
 
 ### 테이블명: `test_results`
 
@@ -20,7 +20,7 @@
 |`score_i`|`int2`|Not Null, Check `(0~100)`|I (개인) 누적 점수|
 |`score_t`|`int2`|Not Null, Check `(0~100)`|T (전통) 누적 점수|
 |`score_p`|`int2`|Not Null, Check `(0~100)`|P (진보) 누적 점수|
-|`score_m`|`int2`|Not Null, Check `(0~100)`|M (능력) 누적 점수|
+|`score_m`|`int2`|Not Null, Check `(0~100)`|M (성과) 누적 점수|
 |`score_e`|`int2`|Not Null, Check `(0~100)`|E (평등) 누적 점수|
 |`score_o`|`int2`|Not Null, Check `(0~100)`|O (질서) 누적 점수|
 |`score_l`|`int2`|Not Null, Check `(0~100)`|L (자유) 누적 점수|

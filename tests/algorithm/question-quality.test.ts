@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AXIS_SIDES } from '../../src/lib/shared/constants';
-import { questions } from '../../src/lib/server/data/questions.ko-KR';
+import { allQuestions, questions } from '../../src/lib/server/data/questions.ko-KR';
 import { resultMappings } from '../../src/lib/server/data/result-mappings.ko-KR';
 
 const FORBIDDEN_COPY_PATTERNS = [
@@ -18,6 +18,8 @@ const FORBIDDEN_COPY_PATTERNS = [
   /위험한 사람/
 ];
 
+const REPETITIVE_TEST_COPY_PATTERNS = [/찬성한다/, /반대한다/, /상황입니다/];
+
 const MOJIBAKE_PATTERNS = [
   /�/,
   /[一-鿿]/,
@@ -32,12 +34,28 @@ function assertCleanKoreanCopy(value: string): void {
   expect(FORBIDDEN_COPY_PATTERNS.some((pattern) => pattern.test(value))).toBe(false);
 }
 
+function assertNonRepetitiveTestCopy(value: string): void {
+  expect(REPETITIVE_TEST_COPY_PATTERNS.some((pattern) => pattern.test(value))).toBe(false);
+}
+
+function assertDisplayHighlights(value: string, highlights: string[]): void {
+  expect(highlights.length).toBeGreaterThan(0);
+  for (const highlight of highlights) {
+    expect(highlight.trim()).toBe(highlight);
+    expect(highlight.length).toBeGreaterThanOrEqual(2);
+    expect(value).toContain(highlight);
+  }
+}
+
 describe('question and result copy quality gates', () => {
   it('keeps every question and choice readable, non-broken, and value-dilemma based', () => {
     for (const question of questions) {
       assertCleanKoreanCopy(question.prompt);
       assertCleanKoreanCopy(question.choices.A);
       assertCleanKoreanCopy(question.choices.B);
+      assertNonRepetitiveTestCopy(question.prompt);
+      assertNonRepetitiveTestCopy(question.choices.A);
+      assertNonRepetitiveTestCopy(question.choices.B);
 
       expect(question.prompt.length).toBeLessThanOrEqual(80);
       expect(question.choices.A.length).toBeLessThanOrEqual(90);
@@ -47,8 +65,32 @@ describe('question and result copy quality gates', () => {
     }
   });
 
+  it('keeps every question display model complete and aligned with plain copy', () => {
+    for (const question of allQuestions) {
+      expect(question.metadata.scenarioTag).toMatch(/^[a-z0-9_-]+$/);
+      expect(question.metadata.copyFamily).toMatch(/^(base-copy|variant-v[23])$/);
+      expect(['daily', 'institutional', 'crisis']).toContain(question.metadata.toneTag);
+
+      expect(question.display.promptLines).toHaveLength(2);
+      expect(question.display.promptLines.join(' ')).toContain(question.prompt.slice(0, 10));
+      assertDisplayHighlights(question.display.promptLines.join(' '), question.display.promptHighlights);
+
+      for (const choice of ['A', 'B'] as const) {
+        const display = question.display.choices[choice];
+
+        expect(display.body).toBe(question.choices[choice]);
+        expect(display.label.length).toBeGreaterThanOrEqual(4);
+        expect(display.label.length).toBeLessThanOrEqual(16);
+        assertCleanKoreanCopy(display.body);
+        assertNonRepetitiveTestCopy(display.label);
+        assertNonRepetitiveTestCopy(display.body);
+        assertDisplayHighlights(`${display.label} ${display.body}`, display.highlights);
+      }
+    }
+  });
+
   it('keeps scoring direction consistent with the axis contract', () => {
-    for (const question of questions) {
+    for (const question of allQuestions) {
       const [left, right] = AXIS_SIDES[question.axis];
 
       if (question.phase === 1 || question.branchCondition === 'BALANCED') {

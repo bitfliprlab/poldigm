@@ -4,7 +4,7 @@
   import BottomActions from '$lib/components/result/BottomActions.svelte';
   import ResultCapture from '$lib/components/result/ResultCapture.svelte';
   import type { PublicResult } from '$lib/shared/types';
-  import { getLastResult } from '$lib/client/session';
+  import { getLastResult, getNickname } from '$lib/client/session';
 
   export let data: {
     result: PublicResult | null;
@@ -12,8 +12,10 @@
   };
 
   let result: PublicResult | null = data.result;
+  let nickname = '';
 
   onMount(() => {
+    nickname = getNickname();
     if (result) return;
     const fallback = getLastResult();
     if (fallback?.resultId === data.resultId) {
@@ -22,11 +24,22 @@
   });
 </script>
 
+<svelte:head>
+  <title>{result?.resultViewModel.title ?? '결과'} - Poldigm 결과</title>
+  <meta
+    name="description"
+    content={result
+      ? `${result.resultViewModel.subtitle} Poldigm에서 나의 사회적·정치적 가치관을 확인해보세요.`
+      : 'Poldigm 결과를 확인해보세요.'}
+  />
+  <meta name="robots" content="noindex,follow" />
+</svelte:head>
+
 <section class="screen result-screen">
   <AppHeader compact />
 
   {#if result}
-    <ResultCapture {result} />
+    <ResultCapture {result} {nickname} />
 
     <section class="detail">
       <h2>상세 해석</h2>

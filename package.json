@@ -8,13 +8,18 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "audit": "npm audit --audit-level=low",
+    "verify": "npm run check && npm run audit && npm run test && npm run build",
+    "verify:e2e": "npm run test:e2e",
+    "verify:ci": "npm run verify && npm run test:e2e:managed",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:managed": "playwright test --project=desktop --project=mobile",
     "test:e2e:chrome": "playwright test --project=chrome-desktop --project=chrome-mobile"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
-    "@sveltejs/adapter-auto": "^6.0.0",
+    "@sveltejs/adapter-cloudflare": "^7.2.9",
     "@sveltejs/kit": "^2.22.0",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@testing-library/svelte": "^5.2.8",
@@ -28,5 +33,10 @@
   },
   "dependencies": {
     "html2canvas": "^1.4.1"
+  },
+  "overrides": {
+    "@sveltejs/kit": {
+      "cookie": "0.7.2"
+    }
   }
 }

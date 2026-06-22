@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
   import ChoiceCard from '$lib/components/test/ChoiceCard.svelte';
+  import HighlightedText from '$lib/components/test/HighlightedText.svelte';
   import ProgressBar from '$lib/components/test/ProgressBar.svelte';
   import type { AnswerHistoryItem, Choice, PublicQuestion, PublicResult } from '$lib/shared/types';
   import {
@@ -10,9 +12,11 @@
     deviceType,
     getHistory,
     getPlayTimeSec,
+    getQuestionSeed,
     resetSession,
     saveLastResult
   } from '$lib/client/session';
+  import { isLocalApp } from '$lib/constants/runtime';
 
   type NextQuestionResponse =
     | { status: 'in_progress'; question: PublicQuestion }
@@ -29,11 +33,11 @@
     const response = await fetch('/api/next-question', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ history: currentHistory })
+      body: JSON.stringify({ history: currentHistory, questionSeed: getQuestionSeed() })
     });
 
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload?.error?.message ?? '다음 질문을 불러오지 못했어요.');
+    if (!response.ok) throw new Error(payload?.error?.message ?? '다음 문항을 불러오지 못했어요.');
 
     const data = payload as NextQuestionResponse;
     if (data.status === 'completed') {
@@ -54,7 +58,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         history: currentHistory,
-        turnstileToken: 'local-mock-token',
+        turnstileToken: dev && isLocalApp ? 'local-mock-token' : '',
         playTimeSec: getPlayTimeSec(),
         deviceType: deviceType()
       })
@@ -150,6 +154,12 @@
   });
 </script>
 
+<svelte:head>
+  <title>테스트 진행 중 - Poldigm</title>
+  <meta name="description" content="Poldigm 테스트를 진행 중입니다." />
+  <meta name="robots" content="noindex,nofollow" />
+</svelte:head>
+
 <section class="screen test-screen">
   <AppHeader compact />
 
@@ -172,17 +182,35 @@
     />
 
     <article class="question-card">
-      <span>{question.axis.replace('_', ' / ')}</span>
-      <h1>{question.prompt}</h1>
+      <span class="question-axis">{question.axis.replace('_', ' / ')}</span>
+      <h1 aria-label={question.prompt}>
+        {#each question.display.promptLines as line}
+          <span class="question-line">
+            <HighlightedText text={line} highlights={question.display.promptHighlights} />
+          </span>
+        {/each}
+      </h1>
     </article>
 
     <div class="choices">
-      <ChoiceCard choice="A" text={question.choices.A} disabled={loading} onSelect={() => choose('A')} />
-      <ChoiceCard choice="B" text={question.choices.B} disabled={loading} onSelect={() => choose('B')} />
+      <ChoiceCard
+        choice="A"
+        text={question.choices.A}
+        display={question.display.choices.A}
+        disabled={loading}
+        onSelect={() => choose('A')}
+      />
+      <ChoiceCard
+        choice="B"
+        text={question.choices.B}
+        display={question.display.choices.B}
+        disabled={loading}
+        onSelect={() => choose('B')}
+      />
     </div>
   {:else}
     <div class="analysis">
-      <p>첫 질문을 준비하고 있습니다...</p>
+      <p>첫 문항을 준비하고 있습니다...</p>
     </div>
   {/if}
 
@@ -209,7 +237,7 @@
     min-height: 260px;
   }
 
-  .question-card span {
+  .question-axis {
     color: var(--color-accent);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-bold);
@@ -217,16 +245,35 @@
 
   h1 {
     margin: 0;
-    font-size: var(--font-size-question);
+    font-size: 24px;
     line-height: var(--line-height-question);
     letter-spacing: 0;
     overflow-wrap: anywhere;
+  }
+
+  .question-line {
+    display: block;
+  }
+
+  .question-line + .question-line {
+    margin-top: 6px;
+  }
+
+  h1 :global(strong) {
+    color: var(--color-text);
+    font-weight: var(--font-weight-black);
   }
 
   .choices {
     display: grid;
     gap: 14px;
     padding-bottom: 24px;
+  }
+
+  @media (min-width: 420px) {
+    h1 {
+      font-size: 26px;
+    }
   }
 
   .analysis {

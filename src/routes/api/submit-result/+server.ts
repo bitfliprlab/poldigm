@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import type { DeviceType } from '$lib/shared/types';
 import { abuseProblem, ApiProblem, validationProblem } from '$lib/server/algorithm/errors';
+import { readJsonObject } from '$lib/server/api/request';
 import { buildPublicResult } from '$lib/server/algorithm/results';
 import { parseHistory, validateReachableHistory } from '$lib/server/algorithm/validation';
 import { verifyTurnstileToken } from '$lib/server/bot/mock-turnstile';
@@ -13,13 +14,7 @@ function parseDeviceType(value: unknown): DeviceType | undefined {
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const body = (await request.json()) as {
-      history?: unknown;
-      turnstileToken?: unknown;
-      playTimeSec?: unknown;
-      deviceType?: unknown;
-      utmSource?: unknown;
-    };
+    const body = await readJsonObject(request);
 
     const history = parseHistory(body.history ?? []);
     if (history.length !== 20) throw validationProblem('결과 산출에는 정확히 20개 응답이 필요합니다.');

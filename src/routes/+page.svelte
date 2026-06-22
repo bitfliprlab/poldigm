@@ -1,11 +1,38 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
-  import { resetSession } from '$lib/client/session';
+  import { getNickname, resetSession, saveNickname } from '$lib/client/session';
+  import { appBaseUrl } from '$lib/constants/runtime';
 
-  function startTest() {
-    resetSession();
+  let nickname = '';
+  let hydrated = false;
+
+  function currentNickname() {
+    return document.querySelector<HTMLInputElement>('input[name="nickname"]')?.value ?? nickname;
   }
+
+  async function startTest() {
+    resetSession();
+    saveNickname(currentNickname());
+    await goto('/test?restart=1');
+  }
+
+  onMount(() => {
+    nickname = getNickname();
+    hydrated = true;
+  });
 </script>
+
+<svelte:head>
+  <title>Poldigm - 나의 사회적·정치적 가치관 테스트</title>
+  <meta
+    name="description"
+    content="20개의 딜레마 문항으로 나의 사회적·정치적 가치관과 16가지 스펙트럼을 확인해보세요."
+  />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href={`${appBaseUrl}/`} />
+</svelte:head>
 
 <section class="screen landing">
   <AppHeader />
@@ -18,14 +45,29 @@
   </div>
 
   <div class="copy">
-    <p>100개 후보 딜레마 중</p>
+    <p>132개 후보 딜레마 중</p>
     <h1>당신에게 도착한 20문항.</h1>
-    <strong>숨겨진 사회적 페르소나와 16가지 가치관 스펙트럼</strong>
+    <strong>숨겨진 사회적·정치적 가치관과 16가지 스펙트럼</strong>
   </div>
 
   <div class="bottom">
     <p>현재 <b>24,512</b>명이 테스트에 참여했어요</p>
-    <a class="start-button" role="button" href="/test?restart=1" onclick={startTest}>테스트 시작하기</a>
+    <label class="nickname">
+      <span>닉네임</span>
+      <input
+        bind:value={nickname}
+        maxlength="16"
+        name="nickname"
+        placeholder="선택 입력"
+        autocomplete="nickname"
+        disabled={!hydrated}
+      />
+    </label>
+    <button class="start-button" type="button" disabled={!hydrated} onclick={startTest}>테스트 시작하기</button>
+    <p class="legal-copy">
+      시작 시 <a href="/terms">이용약관</a> 및 <a href="/privacy">개인정보처리방침</a>에 동의한 것으로 간주됩니다.
+      닉네임은 선택 입력이며 서버에 저장되지 않습니다.
+    </p>
   </div>
 </section>
 
@@ -90,7 +132,7 @@
   .copy {
     display: grid;
     gap: 10px;
-    padding-bottom: 150px;
+    padding-bottom: 205px;
   }
 
   .copy p,
@@ -135,8 +177,54 @@
     font-size: var(--font-size-caption);
   }
 
+  .legal-copy {
+    line-height: var(--line-height-normal);
+  }
+
+  .legal-copy a {
+    color: var(--color-text-soft);
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
+  }
+
   .bottom b {
     color: var(--color-text);
+  }
+
+  .nickname {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: rgba(31, 41, 55, 0.86);
+  }
+
+  .nickname span {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .nickname input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-text);
+    text-align: right;
+  }
+
+  .nickname input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .nickname input:disabled {
+    opacity: 0.58;
   }
 
   .start-button {
@@ -150,5 +238,10 @@
     text-decoration: none;
     font-weight: var(--font-weight-bold);
     box-shadow: var(--shadow-primary-glow);
+  }
+
+  .start-button:disabled {
+    opacity: 0.58;
+    box-shadow: none;
   }
 </style>

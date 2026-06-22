@@ -2,7 +2,7 @@ import { AXIS_ORDER, AXIS_SIDES, TOTAL_QUESTION_COUNT } from '$lib/shared/consta
 import type { AnswerHistoryItem, Axis, BranchCondition } from '$lib/shared/types';
 import { questions } from '$lib/server/data/questions.ko-KR';
 import type { QuestionDefinition } from '$lib/server/data/types';
-import { expectedQuestionAtIndex, getQuestionById } from './questions';
+import { expectedQuestionAtIndex, getQuestionById, slotIdForQuestion } from './questions';
 import { validationProblem } from './errors';
 
 export function parseHistory(input: unknown): AnswerHistoryItem[] {
@@ -44,7 +44,7 @@ export function validateReachableHistory(
   const seen = new Set<string>();
   for (let index = 0; index < history.length; index += 1) {
     const answer = history[index];
-    getQuestionById(answer.questionId);
+    const answeredQuestion = getQuestionById(answer.questionId);
 
     if (seen.has(answer.questionId)) {
       throw validationProblem('중복 문항 ID가 포함되어 있습니다.');
@@ -52,7 +52,7 @@ export function validateReachableHistory(
     seen.add(answer.questionId);
 
     const expected = expectedQuestionAtIndex(history.slice(0, index));
-    if (answer.questionId !== expected.id) {
+    if (slotIdForQuestion(answeredQuestion) !== slotIdForQuestion(expected)) {
       throw validationProblem('도달 불가능한 문항 순서입니다.');
     }
   }
@@ -112,7 +112,7 @@ function validateQuestion(question: QuestionDefinition): void {
 }
 
 export function validateQuestionPool(): void {
-  if (questions.length !== 44) throw validationProblem('MVP 문항 풀은 44개여야 합니다.');
+  if (questions.length !== 44) throw validationProblem('MVP 알고리즘 슬롯은 44개여야 합니다.');
 
   const ids = new Set<string>();
   for (const question of questions) {

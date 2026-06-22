@@ -23,6 +23,7 @@ export async function saveCaptureImage(elementId = 'result-capture'): Promise<vo
   link.click();
 }
 
-export function shareText(result: PublicResult): string {
-  return `나의 소셜 페르소나는 [${result.resultViewModel.title}]\n${result.resultViewModel.subtitle}\n${appBaseUrl}`;
+export function shareText(result: PublicResult, nickname = ''): string {
+  const ownerLabel = nickname ? `${nickname}님의 사회적·정치적 가치관은` : '나의 사회적·정치적 가치관은';
+  return `${ownerLabel} [${result.resultViewModel.title}]\n${result.resultViewModel.subtitle}\n${appBaseUrl}`;
 }

@@ -1,25 +1,32 @@
 <script lang="ts">
-  import type { Choice } from '$lib/shared/types';
+  import type { Choice, QuestionChoiceDisplay } from '$lib/shared/types';
+  import HighlightedText from './HighlightedText.svelte';
 
   export let choice: Choice;
   export let text: string;
+  export let display: QuestionChoiceDisplay | null = null;
   export let disabled = false;
   export let onSelect: () => void = () => {};
 </script>
 
 <button class="choice-card" {disabled} onclick={onSelect}>
-  <span>{choice}</span>
-  <strong>{text}</strong>
+  <span class="choice-badge">{choice}</span>
+  <span class="choice-copy">
+    <strong class="choice-label">{display?.label ?? `${choice} 선택`}</strong>
+    <span class="choice-body">
+      <HighlightedText text={display?.body ?? text} highlights={display?.highlights ?? []} />
+    </span>
+  </span>
 </button>
 
 <style>
   .choice-card {
     width: 100%;
-    min-height: var(--choice-min-height);
+    min-height: 132px;
     display: grid;
-    grid-template-columns: 36px 1fr;
+    grid-template-columns: 38px minmax(0, 1fr);
     align-items: center;
-    gap: 14px;
+    gap: 16px;
     padding: var(--space-card);
     border: 1px solid transparent;
     border-radius: var(--radius-lg);
@@ -51,21 +58,54 @@
     transform: none;
   }
 
-  span {
+  .choice-badge {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: rgba(34, 211, 238, 0.12);
     color: var(--color-accent);
     font-weight: var(--font-weight-black);
   }
 
-  strong {
-    font-size: var(--font-size-choice);
+  .choice-copy {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+  }
+
+  .choice-label {
+    color: var(--color-text);
+    font-size: 19px;
+    font-weight: var(--font-weight-black);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .choice-body {
+    font-size: 16px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-normal);
+    color: var(--color-text-soft);
     overflow-wrap: anywhere;
+  }
+
+  .choice-body :global(strong) {
+    color: var(--color-text);
+    font-weight: var(--font-weight-black);
+  }
+
+  @media (max-width: 390px) {
+    .choice-card {
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 12px;
+      min-height: 138px;
+    }
+
+    .choice-badge {
+      width: 34px;
+      height: 34px;
+    }
   }
 </style>
