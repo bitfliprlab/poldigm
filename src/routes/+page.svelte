@@ -3,10 +3,22 @@
   import { onMount } from 'svelte';
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
   import { getNickname, resetSession, saveNickname } from '$lib/client/session';
-  import { appBaseUrl } from '$lib/constants/runtime';
+  import {
+    absoluteUrl,
+    organizationJsonLd,
+    siteDescription,
+    siteLocale,
+    siteName,
+    siteTitle,
+    websiteJsonLd
+  } from '$lib/shared/seo';
 
   let nickname = '';
   let hydrated = false;
+  const ldJsonOpen = '<script type="application/ld+json">';
+  const ldJsonClose = '</scr' + 'ipt>';
+  const websiteJsonLdTag = `${ldJsonOpen}${JSON.stringify(websiteJsonLd)}${ldJsonClose}`;
+  const organizationJsonLdTag = `${ldJsonOpen}${JSON.stringify(organizationJsonLd)}${ldJsonClose}`;
 
   function currentNickname() {
     return document.querySelector<HTMLInputElement>('input[name="nickname"]')?.value ?? nickname;
@@ -25,13 +37,21 @@
 </script>
 
 <svelte:head>
-  <title>Poldigm - 나의 사회적·정치적 가치관 테스트</title>
-  <meta
-    name="description"
-    content="20개의 딜레마 문항으로 나의 사회적·정치적 가치관과 16가지 스펙트럼을 확인해보세요."
-  />
+  <title>{siteTitle}</title>
+  <meta name="description" content={siteDescription} />
   <meta name="robots" content="index,follow" />
-  <link rel="canonical" href={`${appBaseUrl}/`} />
+  <link rel="canonical" href={absoluteUrl('/')} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content={siteName} />
+  <meta property="og:locale" content={siteLocale} />
+  <meta property="og:title" content={siteTitle} />
+  <meta property="og:description" content={siteDescription} />
+  <meta property="og:url" content={absoluteUrl('/')} />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content={siteTitle} />
+  <meta name="twitter:description" content={siteDescription} />
+  {@html websiteJsonLdTag}
+  {@html organizationJsonLdTag}
 </svelte:head>
 
 <section class="screen landing">

@@ -1,13 +1,31 @@
 <script lang="ts">
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
-  import { appBaseUrl } from '$lib/constants/runtime';
+  import { absoluteUrl, breadcrumbJsonLd, siteName } from '$lib/shared/seo';
+
+  const title = '이용약관 - Poldigm';
+  const description = 'Poldigm 서비스 이용약관입니다.';
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: '홈', path: '/' },
+    { name: '이용약관', path: '/terms' }
+  ]);
+  const breadcrumbsJsonLdTag =
+    '<script type="application/ld+json">' + JSON.stringify(breadcrumbs) + '</scr' + 'ipt>';
 </script>
 
 <svelte:head>
-  <title>이용약관 - Poldigm</title>
-  <meta name="description" content="Poldigm 서비스 이용약관입니다." />
+  <title>{title}</title>
+  <meta name="description" content={description} />
   <meta name="robots" content="index,follow" />
-  <link rel="canonical" href={`${appBaseUrl}/terms`} />
+  <link rel="canonical" href={absoluteUrl('/terms')} />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content={siteName} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={absoluteUrl('/terms')} />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  {@html breadcrumbsJsonLdTag}
 </svelte:head>
 
 <section class="screen legal">

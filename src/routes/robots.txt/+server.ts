@@ -1,7 +1,15 @@
-import { appBaseUrl } from '$lib/constants/runtime';
+import { absoluteUrl } from '$lib/shared/seo';
 
 export function GET() {
-  const body = ['User-agent: *', 'Allow: /', '', `Sitemap: ${appBaseUrl}/sitemap.xml`, ''].join('\n');
+  const body = [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /test',
+    'Disallow: /result/',
+    '',
+    `Sitemap: ${absoluteUrl('/sitemap.xml')}`,
+    ''
+  ].join('\n');
 
   return new Response(body, {
     headers: {

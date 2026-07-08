@@ -1,13 +1,31 @@
 <script lang="ts">
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
-  import { appBaseUrl } from '$lib/constants/runtime';
+  import { absoluteUrl, breadcrumbJsonLd, siteName } from '$lib/shared/seo';
+
+  const title = '개인정보처리방침 - Poldigm';
+  const description = 'Poldigm 개인정보처리방침입니다.';
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: '홈', path: '/' },
+    { name: '개인정보처리방침', path: '/privacy' }
+  ]);
+  const breadcrumbsJsonLdTag =
+    '<script type="application/ld+json">' + JSON.stringify(breadcrumbs) + '</scr' + 'ipt>';
 </script>
 
 <svelte:head>
-  <title>개인정보처리방침 - Poldigm</title>
-  <meta name="description" content="Poldigm 개인정보처리방침입니다." />
+  <title>{title}</title>
+  <meta name="description" content={description} />
   <meta name="robots" content="index,follow" />
-  <link rel="canonical" href={`${appBaseUrl}/privacy`} />
+  <link rel="canonical" href={absoluteUrl('/privacy')} />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content={siteName} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={absoluteUrl('/privacy')} />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  {@html breadcrumbsJsonLdTag}
 </svelte:head>
 
 <section class="screen legal">
