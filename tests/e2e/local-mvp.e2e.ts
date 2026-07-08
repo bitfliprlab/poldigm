@@ -12,14 +12,24 @@ test.beforeAll(() => {
 test('landing renders and has no Vite overlay', async ({ page }, testInfo) => {
   await page.goto('/');
 
-  await expect(page.getByText('132개 후보 딜레마 중')).toBeVisible();
-  await expect(page.getByRole('heading', { name: '당신에게 도착한 20문항.' })).toBeVisible();
+  await expect(page.getByText('정답 없는 선택지')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '가치관 밸런스 체크' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: '닉네임' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: '닉네임' })).toBeEnabled();
   await expect(page.getByRole('button', { name: '테스트 시작하기' })).toBeEnabled();
   await expect(page.getByRole('link', { name: '이용약관' })).toBeVisible();
   await expect(page.getByRole('link', { name: '개인정보처리방침' })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'http://127.0.0.1:5173/');
+  await expect(page.locator('meta[name="description"]')).toHaveCount(1);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    'http://127.0.0.1:5173/og-image.svg'
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+  const jsonLdTypes = await page.locator('script[type="application/ld+json"]').evaluateAll((nodes) =>
+    nodes.map((node) => JSON.parse(node.textContent ?? '{}')['@type'])
+  );
+  expect(jsonLdTypes).toEqual(expect.arrayContaining(['WebSite', 'WebApplication', 'Organization']));
   await expect(page.locator('.vite-error-overlay, #webpack-dev-server-client-overlay')).toHaveCount(0);
 
   await page.screenshot({
@@ -86,13 +96,14 @@ test('robots and sitemap expose only public static routes', async ({ request }) 
   const robotsText = await robots.text();
   expect(robotsText).toContain('User-agent: *');
   expect(robotsText).toContain('Allow: /');
+  expect(robotsText).toContain('Disallow: /api/');
   expect(robotsText).toContain('Sitemap: http://127.0.0.1:5173/sitemap.xml');
 
   const sitemap = await request.get('/sitemap.xml');
   expect(sitemap.ok()).toBe(true);
   expect(sitemap.headers()['content-type']).toContain('application/xml');
   const sitemapText = await sitemap.text();
-  expect(sitemapText).toContain('<loc>http://127.0.0.1:5173</loc>');
+  expect(sitemapText).toContain('<loc>http://127.0.0.1:5173/</loc>');
   expect(sitemapText).toContain('<loc>http://127.0.0.1:5173/terms</loc>');
   expect(sitemapText).toContain('<loc>http://127.0.0.1:5173/privacy</loc>');
   expect(sitemapText).not.toContain('/test');

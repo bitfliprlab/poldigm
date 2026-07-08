@@ -100,6 +100,7 @@ http://127.0.0.1:5173
 # Local MVP에서는 외부 서비스 연결을 사용하지 않습니다.
 PUBLIC_APP_ENV=local
 PUBLIC_APP_BASE_URL=http://127.0.0.1:5173
+PUBLIC_GA_MEASUREMENT_ID=
 
 # 실제 MVP 전환 시 사용 예정. Local MVP에서는 비워둡니다.
 SUPABASE_URL=

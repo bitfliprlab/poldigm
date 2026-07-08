@@ -1,6 +1,6 @@
 <script lang="ts">
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
-  import { absoluteUrl, breadcrumbJsonLd, siteName } from '$lib/shared/seo';
+  import { absoluteUrl, breadcrumbJsonLd, defaultOgImageUrl, siteImageAlt, siteName } from '$lib/shared/seo';
 
   const title = '이용약관 - Poldigm';
   const description = 'Poldigm 서비스 이용약관입니다.';
@@ -22,9 +22,12 @@
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:url" content={absoluteUrl('/terms')} />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content={defaultOgImageUrl} />
+  <meta property="og:image:alt" content={siteImageAlt} />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={defaultOgImageUrl} />
   {@html breadcrumbsJsonLdTag}
 </svelte:head>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
-  import { absoluteUrl, breadcrumbJsonLd, siteName } from '$lib/shared/seo';
+  import { absoluteUrl, breadcrumbJsonLd, defaultOgImageUrl, siteImageAlt, siteName } from '$lib/shared/seo';
 
   const title = '개인정보처리방침 - Poldigm';
   const description = 'Poldigm 개인정보처리방침입니다.';
@@ -22,9 +22,12 @@
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:url" content={absoluteUrl('/privacy')} />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content={defaultOgImageUrl} />
+  <meta property="og:image:alt" content={siteImageAlt} />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={defaultOgImageUrl} />
   {@html breadcrumbsJsonLdTag}
 </svelte:head>
 
@@ -74,8 +77,22 @@
     <section>
       <h2>광고와 분석 도구</h2>
       <p>
-        로컬 MVP는 광고 스크립트와 분석 도구를 사용하지 않습니다. 실제 MVP에서 도입하는 경우 처리 목적,
-        제공업체, 거부 방법을 별도로 고지합니다.
+        Poldigm은 공개 배포 환경에서 Google Analytics 4를 사용해 페이지 방문, 유입 경로, 브라우저 환경 같은
+        서비스 이용 통계를 확인할 수 있습니다. 로컬 개발 환경과 측정 ID가 없는 환경에서는 분석 스크립트를
+        로드하지 않습니다. 이 과정에서 Google이 쿠키 또는 온라인 식별자를 사용할 수 있으며, 수집된 정보는 서비스
+        품질 개선과 오류 파악 목적으로만 활용합니다.
+      </p>
+      <p>
+        닉네임, 결과 ID, 테스트 응답 내용, 결과 유형, 개인별 정치 성향 추론값은 Google Analytics 이벤트
+        파라미터로 전송하지 않습니다. Google Analytics의 정보 처리와 거부 방법은
+        <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">
+          Google 파트너 사이트 정책
+        </a>
+        및
+        <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noreferrer">
+          Google Analytics 차단 브라우저 부가 기능
+        </a>
+        에서 확인할 수 있습니다.
       </p>
     </section>
 

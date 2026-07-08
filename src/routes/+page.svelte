@@ -5,11 +5,14 @@
   import { getNickname, resetSession, saveNickname } from '$lib/client/session';
   import {
     absoluteUrl,
+    defaultOgImageUrl,
     organizationJsonLd,
     siteDescription,
+    siteImageAlt,
     siteLocale,
     siteName,
     siteTitle,
+    webApplicationJsonLd,
     websiteJsonLd
   } from '$lib/shared/seo';
 
@@ -18,6 +21,7 @@
   const ldJsonOpen = '<script type="application/ld+json">';
   const ldJsonClose = '</scr' + 'ipt>';
   const websiteJsonLdTag = `${ldJsonOpen}${JSON.stringify(websiteJsonLd)}${ldJsonClose}`;
+  const webApplicationJsonLdTag = `${ldJsonOpen}${JSON.stringify(webApplicationJsonLd)}${ldJsonClose}`;
   const organizationJsonLdTag = `${ldJsonOpen}${JSON.stringify(organizationJsonLd)}${ldJsonClose}`;
 
   function currentNickname() {
@@ -47,10 +51,14 @@
   <meta property="og:title" content={siteTitle} />
   <meta property="og:description" content={siteDescription} />
   <meta property="og:url" content={absoluteUrl('/')} />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content={defaultOgImageUrl} />
+  <meta property="og:image:alt" content={siteImageAlt} />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={siteTitle} />
   <meta name="twitter:description" content={siteDescription} />
+  <meta name="twitter:image" content={defaultOgImageUrl} />
   {@html websiteJsonLdTag}
+  {@html webApplicationJsonLdTag}
   {@html organizationJsonLdTag}
 </svelte:head>
 

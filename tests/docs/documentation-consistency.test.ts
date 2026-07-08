@@ -226,6 +226,7 @@ describe('documentation consistency', () => {
     const expectedVars = [
       'PUBLIC_APP_ENV',
       'PUBLIC_APP_BASE_URL',
+      'PUBLIC_GA_MEASUREMENT_ID',
       'SUPABASE_URL',
       'SUPABASE_SERVICE_ROLE_KEY',
       'TURNSTILE_SECRET_KEY',

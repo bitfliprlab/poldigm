@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Poldigm 가치관 밸런스 체크</title>
+  <desc id="desc">20개의 딜레마 문항으로 나의 사회적 정치적 가치관을 확인하는 Poldigm 공유 이미지</desc>
+  <rect width="1200" height="630" fill="#f5f1e8"/>
+  <circle cx="995" cy="120" r="170" fill="#d6ef83" opacity="0.92"/>
+  <circle cx="156" cy="545" r="210" fill="#f1c84b" opacity="0.88"/>
+  <rect x="92" y="86" width="1016" height="458" rx="42" fill="#ffffff" stroke="#161616" stroke-width="6"/>
+  <text x="140" y="176" fill="#6d7f1f" font-family="Arial, 'Noto Sans KR', sans-serif" font-size="34" font-weight="700">Poldigm</text>
+  <text x="140" y="280" fill="#161616" font-family="Arial, 'Noto Sans KR', sans-serif" font-size="72" font-weight="800">가치관 밸런스 체크</text>
+  <text x="140" y="360" fill="#333333" font-family="Arial, 'Noto Sans KR', sans-serif" font-size="38" font-weight="600">20개의 딜레마로 보는 나의 사회적·정치적 스펙트럼</text>
+  <g transform="translate(140 424)">
+    <rect width="154" height="54" rx="27" fill="#161616"/>
+    <rect x="174" width="170" height="54" rx="27" fill="#f1c84b"/>
+    <rect x="364" width="190" height="54" rx="27" fill="#d6ef83"/>
+    <text x="77" y="36" text-anchor="middle" fill="#ffffff" font-family="Arial, 'Noto Sans KR', sans-serif" font-size="24" font-weight="700">20문항</text>
+    <text x="259" y="36" text-anchor="middle" fill="#161616" font-family="Arial, 'Noto Sans KR', sans-serif" font-size="24" font-weight="700">로그인 없음</text>
+    <text x="459" y="36" text-anchor="middle" fill="#161616" font-family="Arial, 'Noto Sans KR', sans-serif" font-size="24" font-weight="700">약 3분</text>
+  </g>
+</svg>
