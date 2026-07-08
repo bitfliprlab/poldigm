@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { PublicResult } from '$lib/shared/types';
   import AxisGauge from './AxisGauge.svelte';
-  import CharacterImage from './CharacterImage.svelte';
 
   export let result: PublicResult;
   export let nickname = '';
@@ -18,12 +17,6 @@
   <h1>{result.resultViewModel.title}</h1>
   <p class="code">{result.resultCode}</p>
 
-  <CharacterImage
-    characterImg={result.resultViewModel.characterImg}
-    title={result.resultViewModel.title}
-    typeCode={result.resultViewModel.typeCode}
-  />
-
   <p class="subtitle">{result.resultViewModel.subtitle}</p>
 
   <div class="gauges">
@@ -32,31 +25,24 @@
     {/each}
   </div>
 
-  <footer>Poldigm.com</footer>
+  <footer class="capture-footer">Poldigm.com</footer>
 </section>
 
 <style>
   .capture {
     width: 100%;
-    aspect-ratio: var(--capture-aspect-ratio);
     display: grid;
-    grid-template-rows: auto auto auto minmax(180px, 1fr) auto auto auto;
-    gap: 12px;
+    gap: 11px;
     align-items: center;
-    padding: 24px 22px;
+    padding: 20px;
     overflow: hidden;
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    border-radius: 8px;
-    background:
-      radial-gradient(circle at 50% 18%, rgba(34, 211, 238, 0.18), transparent 28%),
-      linear-gradient(180deg, #111827 0%, #0b1020 100%);
+    border: 1px solid rgba(20, 23, 22, 0.06);
+    border-radius: var(--radius-lg);
+    background: #ffffff;
   }
 
   .capture.strong {
-    border-color: rgba(244, 63, 94, 0.48);
-    background:
-      radial-gradient(circle at 50% 18%, rgba(244, 63, 94, 0.18), transparent 28%),
-      linear-gradient(180deg, #111827 0%, #0b1020 100%);
+    border-color: rgba(255, 90, 61, 0.24);
   }
 
   .eyebrow,
@@ -75,11 +61,23 @@
     font-weight: var(--font-weight-medium);
   }
 
+  .code {
+    display: inline-grid;
+    place-self: center;
+    min-width: 72px;
+    padding: 5px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: #f2f2ef;
+    color: var(--color-primary);
+    font-weight: var(--font-weight-black);
+  }
+
   h1 {
     margin: 0;
     text-align: center;
     color: var(--color-text);
-    font-size: clamp(24px, 8vw, var(--font-size-display));
+    font-size: 28px;
     line-height: var(--line-height-tight);
     font-weight: var(--font-weight-black);
     overflow-wrap: anywhere;
@@ -87,12 +85,26 @@
 
   .subtitle {
     color: var(--color-text-soft);
-    font-size: 13px;
+    font-size: 15px;
     line-height: var(--line-height-normal);
+    text-align: center;
   }
 
   .gauges {
+    width: 100%;
     display: grid;
-    gap: 9px;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .capture-footer {
+    display: none;
+  }
+
+  :global(.capture.exporting) .capture-footer {
+    display: block;
   }
 </style>

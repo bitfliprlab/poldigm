@@ -40,6 +40,7 @@
 
   {#if result}
     <ResultCapture {result} {nickname} />
+    <BottomActions {result} />
 
     <section class="detail">
       <h2>상세 해석</h2>
@@ -50,17 +51,16 @@
       <h2>궁합</h2>
       <div>
         <article>
-          <span>환상의 파트너</span>
+          <span>잘 맞는 유형</span>
           <strong>{result.resultViewModel.chemistryBest}</strong>
         </article>
         <article>
-          <span>충돌 포인트</span>
+          <span>다르게 보는 유형</span>
           <strong>{result.resultViewModel.chemistryWorst}</strong>
         </article>
       </div>
     </section>
 
-    <BottomActions {result} />
   {:else}
     <div class="missing">
       <h1>저장된 결과를 찾을 수 없어요.</h1>
@@ -73,15 +73,17 @@
 <style>
   .result-screen {
     display: grid;
-    gap: 18px;
+    gap: 14px;
   }
 
   .detail,
   .chemistry {
     display: grid;
     gap: 10px;
-    padding: 18px 0;
-    border-top: 1px solid var(--color-border);
+    padding: 20px;
+    border: 1px solid rgba(20, 23, 22, 0.06);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
   }
 
   h2,
@@ -102,17 +104,17 @@
   .chemistry div {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 12px;
   }
 
   article {
     display: grid;
     gap: 8px;
-    min-height: 96px;
-    padding: 14px;
+    min-height: 92px;
+    padding: 16px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: var(--color-surface);
+    background: #f7f8f6;
   }
 
   article span {
@@ -146,7 +148,7 @@
     min-height: 48px;
     border-radius: var(--radius-md);
     background: var(--color-primary);
-    color: var(--color-text);
+    color: #ffffff;
     text-decoration: none;
     font-weight: var(--font-weight-bold);
   }

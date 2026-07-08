@@ -84,6 +84,8 @@
   async function choose(choice: Choice) {
     if (!question || loading || submitting) return;
 
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+
     errorMessage = '';
     loading = true;
     const nextHistory = appendAnswer({
@@ -135,7 +137,7 @@
   onMount(async () => {
     if (new URLSearchParams(window.location.search).get('restart') === '1') {
       resetSession();
-      window.history.replaceState({}, '', '/test');
+      await goto('/test', { replaceState: true, noScroll: true });
     }
 
     history = getHistory();
@@ -226,26 +228,30 @@
 <style>
   .test-screen {
     display: grid;
-    grid-template-rows: auto auto minmax(220px, 1fr) auto;
-    gap: 24px;
+    grid-template-rows: auto auto auto auto;
+    gap: 14px;
   }
 
   .question-card {
     display: grid;
     align-content: center;
-    gap: 18px;
-    min-height: 260px;
+    gap: 14px;
+    min-height: 178px;
+    padding: 20px 18px;
+    border: 1px solid rgba(20, 23, 22, 0.06);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
   }
 
   .question-axis {
-    color: var(--color-accent);
+    color: var(--color-primary);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-bold);
   }
 
   h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 23px;
     line-height: var(--line-height-question);
     letter-spacing: 0;
     overflow-wrap: anywhere;
@@ -266,13 +272,13 @@
 
   .choices {
     display: grid;
-    gap: 14px;
+    gap: 9px;
     padding-bottom: 24px;
   }
 
   @media (min-width: 420px) {
     h1 {
-      font-size: 26px;
+      font-size: 25px;
     }
   }
 
@@ -293,7 +299,7 @@
 
   .analysis strong {
     font-size: 52px;
-    color: var(--color-accent);
+    color: var(--color-primary);
   }
 
   .keywords {
@@ -315,9 +321,9 @@
     display: grid;
     gap: 10px;
     padding: 14px;
-    border: 1px solid rgba(244, 63, 94, 0.4);
+    border: 1px solid rgba(159, 47, 63, 0.32);
     border-radius: var(--radius-md);
-    background: rgba(244, 63, 94, 0.08);
+    background: rgba(159, 47, 63, 0.08);
   }
 
   .error p {
@@ -331,7 +337,7 @@
     border: 0;
     border-radius: var(--radius-md);
     background: var(--color-strong);
-    color: var(--color-text);
+    color: #ffffff;
     font-weight: var(--font-weight-bold);
   }
 

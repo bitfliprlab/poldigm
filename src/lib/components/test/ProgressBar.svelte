@@ -19,7 +19,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: var(--color-text-muted);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-medium);
@@ -30,16 +30,16 @@
   }
 
   .progress-track {
-    height: 6px;
+    height: 5px;
     overflow: hidden;
     border-radius: 999px;
-    background: var(--color-surface);
+    background: #e5e5e2;
   }
 
   .progress-value {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    background: var(--color-primary);
     transition: width var(--transition-normal);
   }
 </style>
