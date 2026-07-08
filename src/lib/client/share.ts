@@ -11,11 +11,18 @@ export async function saveCaptureImage(elementId = 'result-capture'): Promise<vo
   if (!target) throw new Error('캡처 영역을 찾을 수 없습니다.');
 
   const { default: html2canvas } = await import('html2canvas');
-  const canvas = await html2canvas(target, {
-    backgroundColor: null,
-    scale: 2,
-    useCORS: true
-  });
+  target.classList.add('exporting');
+
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await html2canvas(target, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true
+    });
+  } finally {
+    target.classList.remove('exporting');
+  }
 
   const link = document.createElement('a');
   link.download = 'poldigm-result.png';

@@ -166,16 +166,14 @@ describe('documentation consistency', () => {
     expect(matches).toEqual([]);
   });
 
-  it('keeps the public candidate-count copy aligned across landing and docs', () => {
+  it('keeps the candidate-pool count copy aligned across technical docs', () => {
     const expectedCopy = `${allQuestions.length}개 후보`;
     const files = [
       'README.md',
-      'src/routes/+page.svelte',
       'docs/01_PRD_제품요구사항정의서.md',
       'docs/10_문항_및_분기_로직_설계서.md',
       'docs/12_문항_랜덤화_및_결과_표시_정책.md',
-      'docs/13_API_문항_variant_보강_명세.md',
-      'docs/20_UIUX_화면설계서_Wireframe.md'
+      'docs/13_API_문항_variant_보강_명세.md'
     ];
 
     for (const file of files) {
@@ -476,7 +474,9 @@ describe('documentation consistency', () => {
     expect(apiDoc).not.toContain('찬성한다.');
     expect(apiDoc).not.toContain('반대한다.');
     expect(apiDoc).not.toContain('공동 안전을 이유로 개인 정보 일부를 임시로 모아야 하는 상황입니다.');
-    expect(apiDoc).toContain('위험이 분명하다면, 한시적인 정보 수집은 받아들일 수 있다.');
+    expect(apiDoc).toContain('감시처럼 느껴져도 피해를 막는 확인 절차는 유지한다.');
+    expect(apiDoc).toContain('먼저 막기');
+    expect(apiDoc).toContain('동의 먼저');
     expect(logicDoc).toContain('피해야 할 prompt');
     expect(logicDoc).toContain('표시용 `display` 예시');
     expect(logicDoc).toContain('`display.promptLines`');

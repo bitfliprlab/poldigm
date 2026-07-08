@@ -34,14 +34,14 @@
 <style>
   .gauge {
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
 
   .labels {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     font-size: 11px;
     color: var(--color-text-muted);
   }
@@ -61,8 +61,7 @@
   }
 
   .split {
-    color: var(--color-text-subtle);
-    font-size: 10px;
+    display: none;
   }
 
   strong {
@@ -71,6 +70,7 @@
   }
 
   p {
+    display: none;
     margin: 0;
     color: var(--color-text-muted);
     font-size: 11px;
@@ -79,16 +79,16 @@
   }
 
   .track {
-    height: 9px;
+    height: 5px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(249, 250, 251, 0.12);
+    background: #dededa;
   }
 
   .fill {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    background: var(--color-primary);
     transition: width var(--transition-normal);
   }
 </style>

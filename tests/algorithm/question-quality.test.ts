@@ -20,6 +20,17 @@ const FORBIDDEN_COPY_PATTERNS = [
 
 const REPETITIVE_TEST_COPY_PATTERNS = [/찬성한다/, /반대한다/, /상황입니다/];
 
+const GENERIC_FALLBACK_COPY_PATTERNS = [
+  /가까운 판단 기준/,
+  /처음 세운 기준/,
+  /원칙을 계속/,
+  /반대쪽 요구/,
+  /동시에 만족시키기 어렵다면/,
+  /쪽을 먼저 보존/,
+  /쪽을 먼저 두고, 생기는/,
+  /쪽을 기준으로 삼고/
+];
+
 const MOJIBAKE_PATTERNS = [
   /�/,
   /[一-鿿]/,
@@ -36,6 +47,10 @@ function assertCleanKoreanCopy(value: string): void {
 
 function assertNonRepetitiveTestCopy(value: string): void {
   expect(REPETITIVE_TEST_COPY_PATTERNS.some((pattern) => pattern.test(value))).toBe(false);
+}
+
+function assertNoGenericFallbackCopy(value: string): void {
+  expect(GENERIC_FALLBACK_COPY_PATTERNS.some((pattern) => pattern.test(value))).toBe(false);
 }
 
 function assertDisplayHighlights(value: string, highlights: string[]): void {
@@ -56,6 +71,9 @@ describe('question and result copy quality gates', () => {
       assertNonRepetitiveTestCopy(question.prompt);
       assertNonRepetitiveTestCopy(question.choices.A);
       assertNonRepetitiveTestCopy(question.choices.B);
+      assertNoGenericFallbackCopy(question.prompt);
+      assertNoGenericFallbackCopy(question.choices.A);
+      assertNoGenericFallbackCopy(question.choices.B);
 
       expect(question.prompt.length).toBeLessThanOrEqual(80);
       expect(question.choices.A.length).toBeLessThanOrEqual(90);

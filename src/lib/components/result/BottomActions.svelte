@@ -37,13 +37,10 @@
 
 <style>
   .actions {
-    position: sticky;
-    bottom: 0;
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(17, 24, 39, 0), var(--color-bg) 24%);
+    padding: 0 0 2px;
   }
 
   button,
@@ -57,12 +54,14 @@
     color: var(--color-text);
     text-decoration: none;
     font-weight: var(--font-weight-bold);
+    font-size: 15px;
+    white-space: nowrap;
   }
 
   .primary {
     border-color: transparent;
     background: var(--color-primary);
-    box-shadow: var(--shadow-primary-glow);
+    color: #ffffff;
   }
 
   .message {
