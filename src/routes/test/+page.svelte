@@ -32,6 +32,10 @@
   let turnstileContainer: HTMLDivElement;
   let turnstileWidgetId: string | null = null;
   let turnstileToken = '';
+  let botVerified = false;
+  let botVerifying = false;
+  let botVerificationGrant = '';
+  let testStarted = false;
 
   const turnstileSiteKey = env.PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
   const usesLocalTurnstileMock = dev && isLocalApp;
@@ -98,12 +102,15 @@
 
     turnstileWidgetId = turnstile.render(turnstileContainer, {
       sitekey: turnstileSiteKey,
-      action: 'turnstile-spin-v1',
+      action: 'test_start',
       callback: (token: string) => {
         turnstileToken = token;
+        void completeBotVerification(token);
       },
       'expired-callback': () => {
         turnstileToken = '';
+        botVerificationGrant = '';
+        botVerified = false;
         if (turnstileWidgetId) turnstile.reset(turnstileWidgetId);
       },
       'error-callback': () => {
@@ -112,17 +119,49 @@
     });
   }
 
-  async function getTurnstileToken() {
-    if (usesLocalTurnstileMock) return 'local-mock-token';
-    if (!turnstileSiteKey) throw new Error('봇 검증 설정이 누락되었습니다.');
-    if (!turnstileWidgetId) await renderTurnstile();
+  async function completeBotVerification(token: string) {
+    if (botVerified || botVerifying) return;
 
-    for (let attempt = 0; attempt < 80; attempt += 1) {
-      if (turnstileToken) return turnstileToken;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    botVerifying = true;
+    errorMessage = '';
+    try {
+      const response = await fetch('/api/verify-bot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turnstileToken: token })
+      });
+
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? '봇 검증에 실패했습니다.');
+
+      botVerificationGrant = String(payload.botVerificationGrant ?? '');
+      if (!botVerificationGrant) throw new Error('봇 검증에 실패했습니다.');
+      botVerified = true;
+      await startOrResumeTest();
+    } catch (error) {
+      turnstileToken = '';
+      botVerificationGrant = '';
+      botVerified = false;
+      errorMessage = error instanceof Error ? error.message : '봇 검증에 실패했습니다.';
+      const turnstile = (window as TurnstileWindow).turnstile;
+      if (turnstileWidgetId) turnstile?.reset(turnstileWidgetId);
+    } finally {
+      botVerifying = false;
     }
+  }
 
-    throw new Error('봇 검증이 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+  async function startOrResumeTest() {
+    if (testStarted) return;
+    testStarted = true;
+    loading = true;
+    try {
+      await requestNextQuestion(history);
+    } catch (error) {
+      testStarted = false;
+      errorMessage = error instanceof Error ? error.message : '진행 정보를 복구하지 못했어요.';
+    } finally {
+      loading = false;
+    }
   }
 
   async function requestNextQuestion(currentHistory: AnswerHistoryItem[]) {
@@ -154,7 +193,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         history: currentHistory,
-        turnstileToken: await getTurnstileToken(),
+        turnstileToken: botVerificationGrant,
         playTimeSec: getPlayTimeSec(),
         deviceType: deviceType()
       })
@@ -209,8 +248,11 @@
     errorMessage = '';
     loading = true;
     try {
-      await renderTurnstile();
-      await requestNextQuestion(history);
+      if (botVerified) {
+        await requestNextQuestion(history);
+      } else {
+        await renderTurnstile();
+      }
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : '오류가 발생했어요.';
     } finally {
@@ -224,8 +266,18 @@
     question = null;
     errorMessage = '';
     loading = true;
+    testStarted = false;
     try {
-      await requestNextQuestion([]);
+      if (usesLocalTurnstileMock) {
+        botVerified = true;
+        botVerificationGrant = 'local-mock-token';
+        await startOrResumeTest();
+      } else {
+        botVerified = false;
+        botVerificationGrant = '';
+        if (turnstileWidgetId) (window as TurnstileWindow).turnstile?.reset(turnstileWidgetId);
+        await renderTurnstile();
+      }
     } finally {
       loading = false;
     }
@@ -244,14 +296,19 @@
     }
 
     try {
-      void renderTurnstile().catch(() => {
-        turnstileToken = '';
-      });
-      await requestNextQuestion(history);
+      if (usesLocalTurnstileMock) {
+        botVerified = true;
+        botVerificationGrant = 'local-mock-token';
+        await startOrResumeTest();
+      } else if (!turnstileSiteKey) {
+        throw new Error('봇 검증 설정이 누락되었습니다.');
+      } else {
+        await renderTurnstile();
+      }
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : '진행 정보를 복구하지 못했어요.';
     } finally {
-      loading = false;
+      if (!botVerified) loading = false;
     }
   });
 </script>
@@ -275,6 +332,24 @@
         <span>평등</span>
         <span>질서</span>
       </div>
+    </div>
+  {:else if !botVerified && !usesLocalTurnstileMock}
+    <div class="verification" aria-live="polite">
+      <div class="verification-copy">
+        <span>Bot check</span>
+        <h1>테스트를 시작하기 전에 확인할게요.</h1>
+        <p>검증이 끝나면 바로 첫 문항으로 넘어갑니다.</p>
+      </div>
+
+      {#if turnstileSiteKey}
+        <div class="bot-check" aria-label="Bot verification">
+          <div bind:this={turnstileContainer}></div>
+        </div>
+      {/if}
+
+      {#if botVerifying}
+        <p class="verification-status">확인 중입니다...</p>
+      {/if}
     </div>
   {:else if question}
     <ProgressBar
@@ -321,12 +396,6 @@
       <p>{errorMessage}</p>
       <button onclick={retry}>다시 시도</button>
       <button class="ghost" onclick={restart}>처음부터 시작</button>
-    </div>
-  {/if}
-
-  {#if !usesLocalTurnstileMock && turnstileSiteKey}
-    <div class="bot-check" aria-label="Bot verification">
-      <div bind:this={turnstileContainer}></div>
     </div>
   {/if}
 </section>
@@ -406,6 +475,39 @@
   .analysis strong {
     font-size: 52px;
     color: var(--color-primary);
+  }
+
+  .verification {
+    min-height: 72dvh;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 18px;
+    text-align: center;
+  }
+
+  .verification-copy {
+    display: grid;
+    gap: 8px;
+    max-width: 360px;
+  }
+
+  .verification-copy span {
+    color: var(--color-primary);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+  }
+
+  .verification-copy h1 {
+    font-size: 25px;
+  }
+
+  .verification-copy p,
+  .verification-status {
+    margin: 0;
+    color: var(--color-text-soft);
+    font-size: var(--font-size-body);
   }
 
   .keywords {

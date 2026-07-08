@@ -4,7 +4,7 @@ import { abuseProblem, ApiProblem, validationProblem } from '$lib/server/algorit
 import { readJsonObject } from '$lib/server/api/request';
 import { buildPublicResult } from '$lib/server/algorithm/results';
 import { parseHistory, validateReachableHistory } from '$lib/server/algorithm/validation';
-import { verifyTurnstileToken } from '$lib/server/bot/mock-turnstile';
+import { verifyBotVerificationGrant } from '$lib/server/bot/mock-turnstile';
 import { createLocalResultId, saveLocalResult } from '$lib/server/storage/mock-results';
 
 function parseDeviceType(value: unknown): DeviceType | undefined {
@@ -20,7 +20,7 @@ export const POST: RequestHandler = async ({ request }) => {
     if (history.length !== 20) throw validationProblem('결과 산출에는 정확히 20개 응답이 필요합니다.');
     validateReachableHistory(history, { allowComplete: true });
 
-    await verifyTurnstileToken(body.turnstileToken, request.headers.get('CF-Connecting-IP') ?? undefined);
+    await verifyBotVerificationGrant(body.turnstileToken);
 
     const playTimeSec = Number(body.playTimeSec);
     if (!Number.isFinite(playTimeSec)) throw validationProblem('playTimeSec가 필요합니다.');
