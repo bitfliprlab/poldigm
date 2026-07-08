@@ -261,7 +261,8 @@ describe('documentation consistency', () => {
     expect(turnstileMock).toContain("from '$app/environment'");
     expect(turnstileMock).toContain('options.isDev && options.isLocal');
     expect(testPage).toContain("from '$app/environment'");
-    expect(testPage).toContain("dev && isLocalApp ? 'local-mock-token' : ''");
+    expect(testPage).toContain('const usesLocalTurnstileMock = dev && isLocalApp');
+    expect(testPage).toContain("if (usesLocalTurnstileMock) return 'local-mock-token'");
     expect(readme).toContain('SvelteKit dev 런타임에서만 실제 Turnstile 없이');
     expect(readme).toContain('`npm run preview`나 production build로 결과 제출까지 완료하려면');
     expect(index).toContain('SvelteKit dev 런타임에서만 실제 Turnstile 없이');

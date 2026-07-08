@@ -20,7 +20,7 @@ export const POST: RequestHandler = async ({ request }) => {
     if (history.length !== 20) throw validationProblem('결과 산출에는 정확히 20개 응답이 필요합니다.');
     validateReachableHistory(history, { allowComplete: true });
 
-    verifyTurnstileToken(body.turnstileToken);
+    await verifyTurnstileToken(body.turnstileToken, request.headers.get('CF-Connecting-IP') ?? undefined);
 
     const playTimeSec = Number(body.playTimeSec);
     if (!Number.isFinite(playTimeSec)) throw validationProblem('playTimeSec가 필요합니다.');

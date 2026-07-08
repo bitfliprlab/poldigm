@@ -1,6 +1,7 @@
 <script lang="ts">
   import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
+  import { env } from '$env/dynamic/public';
   import { onMount } from 'svelte';
   import AppHeader from '$lib/components/layout/AppHeader.svelte';
   import ChoiceCard from '$lib/components/test/ChoiceCard.svelte';
@@ -28,6 +29,101 @@
   let submitting = false;
   let errorMessage = '';
   let analysisProgress = 0;
+  let turnstileContainer: HTMLDivElement;
+  let turnstileWidgetId: string | null = null;
+  let turnstileToken = '';
+
+  const turnstileSiteKey = env.PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
+  const usesLocalTurnstileMock = dev && isLocalApp;
+
+  type TurnstileApi = {
+    render: (
+      container: HTMLElement,
+      options: {
+        sitekey: string;
+        action: string;
+        callback: (token: string) => void;
+        'expired-callback': () => void;
+        'error-callback': () => void;
+      }
+    ) => string;
+    reset: (widgetId?: string) => void;
+  };
+
+  type TurnstileWindow = Window & {
+    turnstile?: TurnstileApi;
+  };
+
+  function loadTurnstileScript() {
+    return new Promise<void>((resolve, reject) => {
+      if (!turnstileSiteKey || usesLocalTurnstileMock) {
+        resolve();
+        return;
+      }
+
+      const turnstileWindow = window as TurnstileWindow;
+      if (turnstileWindow.turnstile) {
+        resolve();
+        return;
+      }
+
+      const existingScript = document.getElementById('cloudflare-turnstile-script');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('봇 검증 스크립트를 불러오지 못했습니다.')), {
+          once: true
+        });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'cloudflare-turnstile-script';
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.addEventListener('load', () => resolve(), { once: true });
+      script.addEventListener('error', () => reject(new Error('봇 검증 스크립트를 불러오지 못했습니다.')), {
+        once: true
+      });
+      document.head.appendChild(script);
+    });
+  }
+
+  async function renderTurnstile() {
+    if (!turnstileSiteKey || usesLocalTurnstileMock || turnstileWidgetId || !turnstileContainer) return;
+
+    await loadTurnstileScript();
+    const turnstile = (window as TurnstileWindow).turnstile;
+    if (!turnstile) throw new Error('봇 검증을 초기화하지 못했습니다.');
+
+    turnstileWidgetId = turnstile.render(turnstileContainer, {
+      sitekey: turnstileSiteKey,
+      action: 'turnstile-spin-v1',
+      callback: (token: string) => {
+        turnstileToken = token;
+      },
+      'expired-callback': () => {
+        turnstileToken = '';
+        if (turnstileWidgetId) turnstile.reset(turnstileWidgetId);
+      },
+      'error-callback': () => {
+        turnstileToken = '';
+      }
+    });
+  }
+
+  async function getTurnstileToken() {
+    if (usesLocalTurnstileMock) return 'local-mock-token';
+    if (!turnstileSiteKey) throw new Error('봇 검증 설정이 누락되었습니다.');
+    if (!turnstileWidgetId) await renderTurnstile();
+
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      if (turnstileToken) return turnstileToken;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error('봇 검증이 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+  }
 
   async function requestNextQuestion(currentHistory: AnswerHistoryItem[]) {
     const response = await fetch('/api/next-question', {
@@ -58,7 +154,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         history: currentHistory,
-        turnstileToken: dev && isLocalApp ? 'local-mock-token' : '',
+        turnstileToken: await getTurnstileToken(),
         playTimeSec: getPlayTimeSec(),
         deviceType: deviceType()
       })
@@ -113,6 +209,7 @@
     errorMessage = '';
     loading = true;
     try {
+      await renderTurnstile();
       await requestNextQuestion(history);
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : '오류가 발생했어요.';
@@ -147,6 +244,9 @@
     }
 
     try {
+      void renderTurnstile().catch(() => {
+        turnstileToken = '';
+      });
       await requestNextQuestion(history);
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : '진행 정보를 복구하지 못했어요.';
@@ -221,6 +321,12 @@
       <p>{errorMessage}</p>
       <button onclick={retry}>다시 시도</button>
       <button class="ghost" onclick={restart}>처음부터 시작</button>
+    </div>
+  {/if}
+
+  {#if !usesLocalTurnstileMock && turnstileSiteKey}
+    <div class="bot-check" aria-label="Bot verification">
+      <div bind:this={turnstileContainer}></div>
     </div>
   {/if}
 </section>
@@ -344,5 +450,11 @@
   .error .ghost {
     border: 1px solid var(--color-border);
     background: transparent;
+  }
+
+  .bot-check {
+    min-height: 70px;
+    display: grid;
+    place-items: center;
   }
 </style>
